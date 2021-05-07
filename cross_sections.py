@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
 
 
 # IBD cross section constants, from Strumia and Vissani 2003
@@ -100,8 +101,8 @@ plt.plot(Eii, 10.**fitfunc(Eii, *fitpars))
 plt.plot(Eii, 10.**(-44.8*Eii**(-0.035)),"g:")
 plt.yscale("log")
 #plt.xscale("log")
-print(fitpars)
-#print(np.abs(10.**fitfunc(Eii, *fitpars) - sigmaAr(Eii))/sigmaAr(Eii))
+#print(fitpars)
+print(np.abs(10.**fitfunc(Eii, *fitpars) - sigmaAr(Eii))/sigmaAr(Eii))
 
 plt.show()
-exit()"""
+"""

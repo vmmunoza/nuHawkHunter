@@ -5,7 +5,6 @@ from scipy import integrate
 from scipy.interpolate import interp1d, Rbf
 from flux_stuff import *
 from cross_sections import *
-from scipy.optimize import curve_fit
 
 # TAKE ONLY electron, now it is taking all species / 6
 
