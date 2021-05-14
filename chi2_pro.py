@@ -103,8 +103,8 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
         chi2int = interpolate.interp1d(fpbhs, chi2_fpbh, fill_value="extrapolate")
         fpbhvec = np.logspace(np.log10(fpbhs[0]), np.log10(fpbhs[-1]))
         minchi2 = np.amin(chi2int(fpbhvec))
-        fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
-        #fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], fpbhs[-1]  ) )
+        #fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
+        fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], 1.e5  ) )
 
     np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
     return data_final, fpbh_bounds
