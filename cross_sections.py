@@ -80,29 +80,51 @@ exit()
 def sigmaIBD(E_e):
     return 9.52e-44*( E_e*np.sqrt(E_e**2. - m_e**2.) )*(1. - 7.*(E_e + np_dif)/m_p )
 
-# nu Argon cross section for DUNE
+# nu_e Argon cross section for DUNE
 # From Denton and Suliga mail
-EE, sig = np.loadtxt("data/nuAr_XS.txt", unpack=True, delimiter=";")
-sigmaAr = interp1d(EE, sig)
+EEAr, sigAr = np.loadtxt("data/XS_nue_40Ar.txt", unpack=True, delimiter=";")
+sigmaAr = interp1d(EEAr, sigAr, fill_value="extrapolate")
 
-"""
-def fitfunc(E, A, alp):
-    return A*E**alp
+# nu_ebar Carbon cross section for JUNO background
+EEC, sigC = np.loadtxt("data/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
+sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
 
-#fitpars = np.polyfit(EE, np.log10(sig), 2)
-#fit = np.poly1d(fitpars)
-fitpars, firtcov = curve_fit(fitfunc, EE, np.log10(sig))
+if __name__=="__main__":
 
+    def fitfunc(E, A, alp):
+        return A*E**alp
 
-Eii = np.linspace(EE[0], EE[-1])
-plt.plot(EE, sig)
-#plt.plot(Eii, 10.**fit(Eii))
-plt.plot(Eii, 10.**fitfunc(Eii, *fitpars))
-plt.plot(Eii, 10.**(-44.8*Eii**(-0.035)),"g:")
-plt.yscale("log")
-#plt.xscale("log")
-#print(fitpars)
-print(np.abs(10.**fitfunc(Eii, *fitpars) - sigmaAr(Eii))/sigmaAr(Eii))
+    def fitfunc2(E, A, alp):
+        #return A*np.log10(E) + alp*np.log10(E)**2.
+        return A*np.log10(E)**alp
 
-plt.show()
-"""
+    Eii = np.linspace(EEC[0], EEC[-1])
+
+    #fitpars = np.polyfit(EE, np.log10(sig), 2)
+    #fit = np.poly1d(fitpars)
+    fitparsAr, firtcov = curve_fit(fitfunc, EEAr, np.log10(sigAr))#, p0=[-4.e1, -0.03])
+    fitparsC, firtcov = curve_fit(fitfunc, EEC, np.log10(sigC))#, p0=[-4.e1, -0.03])
+
+    #plt.plot(Eii, 10.**fit(Eii))
+    plt.plot(Eii, sigmaAr(Eii), "r-")
+    plt.plot(Eii, sigmaC(Eii), "r--")
+    plt.plot(Eii, 10.**fitfunc(Eii, *fitparsAr), "b:")
+    plt.plot(Eii, 10.**fitfunc(Eii, *fitparsC), "b--")
+    #plt.plot(Eii, 10.**(-44.8*Eii**(-0.035)),"g:")
+    plt.yscale("log")
+    plt.xscale("log")
+    print(fitparsAr, fitparsC)
+    print(np.abs(10.**fitfunc(Eii, *fitparsAr) - sigmaAr(Eii))/sigmaAr(Eii))
+    print(np.abs(10.**fitfunc2(Eii, *fitparsC) - sigmaC(Eii))/sigmaC(Eii))
+
+    #EE, sig = np.loadtxt("data/nuAr_XS_Kaes.txt", unpack=True, delimiter=";")
+    #sigmaAr = interp1d(EE, sig)
+    #plt.plot(EE, sig, "m-", lw=2, alpha=0.7)
+    #print(np.abs(sig-sigmaAr(EE))/sig)
+
+    #tab = np.loadtxt("data/xs_nue_Ar40.txt", unpack=True)   # from code SNOwGLoBES https://github.com/SNOwGLoBES/snowglobes/tree/master/xscns
+    #EE, sig = 10.**tab[0]*1.e3, tab[1]*1e-38*1.e-3
+    #sigmaAr = interp1d(EE, sig)
+    #plt.plot(EE, sig, "b-", lw=2, alpha=0.7)
+
+    plt.show()

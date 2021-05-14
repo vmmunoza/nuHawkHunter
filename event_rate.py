@@ -10,6 +10,11 @@ from cross_sections import *
 
 # Backgrounds
 
+# SK
+EbackSK, backSK = np.loadtxt("data/Background_SKII.csv", unpack=True, delimiter=",")
+EdatSK, datSK = np.loadtxt("data/DataPoints_SKII.csv", unpack=True, delimiter=",")
+backSK, datSK = backSK/7.82, datSK/7.82     # Exposure 176 kt-years, so 7.82 yrs
+
 # HK (with Gd)
 # From 1805.04163, figure 188 right
 EbackHK, backHK = np.loadtxt("data/Back_HK.txt", unpack=True, delimiter=";")
@@ -27,10 +32,6 @@ backJUNO = backJUNO/10.     # Change units  (CHECK THIS NORMALIZATION)
 Eatmos, fluxatmos_e, fluxatmos_antie = np.loadtxt("data/flux_atmos_e.dat", unpack=True)
 fluxatmos_e, fluxatmos_antie = fluxatmos_e*year_sec, fluxatmos_antie*year_sec   # to yr^-1
 
-# SK
-EbackSK, backSK = np.loadtxt("data/Background_SKII.csv", unpack=True, delimiter=",")
-EdatSK, datSK = np.loadtxt("data/DataPoints_SKII.csv", unpack=True, delimiter=",")
-backSK, datSK = backSK/7.82, datSK/7.82     # Exposure 176 kt-years, so 7.82 yrs
 
 # From 1804.03157
 def event_rate(E_o, E_nu, flux, exp):
@@ -47,7 +48,7 @@ def event_rate(E_o, E_nu, flux, exp):
             ntot = 1.2e33   # 17 kton
             eps = 0.5       # 1507.05613, for signal, reactor and atm. CC
 
-        fluxint = interp1d(E_nu, flux)
+        fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
         """
         E_e = E_o
         #return ntot*integrate.simps( flux*dsigmadE_IBD(E_nu, E_e)*E_nu, np.log(E_nu) )
@@ -65,13 +66,22 @@ def event_rate(E_o, E_nu, flux, exp):
         return ntot*eps*fluxint(E_o)*sigmaAr(E_o)
 
 def back_rate(exp):
+
+    if exp=="SK":
+        return EbackSK, backSK
+
     if exp=="HK":
         return EbackHK, backHK
         #return EbackSK, backSK*187/22.5
-    if exp=="SK":
-        return EbackSK, backSK
+
     if exp=="JUNO":
-        return EbackJUNO, backJUNO
+        EbackJUNO, fluxe, fluxebar = Eatmos[2:20], fluxatmos_e[2:20], fluxatmos_antie[2:20]
+        backCC = event_rate(EbackJUNO, EbackJUNO, fluxebar, exp)
+        ntot_C, eps_NC = 4.505e33, 0.011
+        backNC = 0.#ntot_C*eps_NC*fluxe*sigmaC(EbackJUNO)
+        #print(backNC/backCC)
+        return EbackJUNO, backNC + backCC
+
     if exp=="DUNE":
         # Consider energies above 19 MeV to avoid solar backgrounds. Take up to  ~70 MeV, check
         EbackDUNE, fluxatmoslow = Eatmos[5:17], fluxatmos_e[5:17]
@@ -134,8 +144,8 @@ if __name__=="__main__":
 
     #exp = "SK"
     #exp = "HK"
-    #exp = "JUNO"
-    exp = "DUNE"
+    exp = "JUNO"
+    #exp = "DUNE"
 
     Eback, eventback = back_rate(exp)
 

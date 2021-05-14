@@ -3,8 +3,10 @@ import pandas as pd
 from scipy import interpolate
 from scipy.interpolate import RectBivariateSpline
 from event_rate import *
+from scipy.optimize import fsolve, brentq
 
 years = 10.
+chi2_th = 2.71
 
 # Poisson chi2
 # s: signal, b: background, d: data
@@ -12,7 +14,7 @@ def Chi_sq_bin(s,b,d):
     return 2.*( s + b -d + d*np.log(d/(s+b)) )
 
 # Compute the chi2 for a grid of PBH parameters for a given experiment
-def compute_chi2(Mpbhs, fpbhs, exp):
+def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
     data_final = []
 
@@ -29,7 +31,7 @@ def compute_chi2(Mpbhs, fpbhs, exp):
         Edat, eventdat = EdatSK, datSK
     else:
         Edat, eventdat = Eback, eventback"""
-        
+
     eventdat = eventback    # for forecasts, take data as background
 
     for Mpbh in Mpbhs:
@@ -51,6 +53,62 @@ def compute_chi2(Mpbhs, fpbhs, exp):
 
     np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
     return data_final
+
+
+# Compute the chi2 for a grid of PBH parameters for a given experiment
+def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
+
+    data_final = []
+
+    Eback, eventback = back_rate(exp)
+    eventback = eventback*years
+    backint = interp1d(Eback, eventback)
+    Ebin = Eback    # Binear?
+
+    """Ebin1, Ebin2 = energybins(exp)
+    Ebin = np.linspace(Ebin1, Ebin2)
+    eventback = backint(Ebin)"""
+
+    """if exp=="SK":
+        Edat, eventdat = EdatSK, datSK
+    else:
+        Edat, eventdat = Eback, eventback"""
+
+    eventdat = eventback    # for forecasts, take data as background
+
+    fpbh_bounds = []
+
+    for Mpbh in Mpbhs:
+
+        folder = "folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
+        Evec, events = np.loadtxt(folder, unpack=True)
+        evint = interp1d(Evec, events)
+
+        chi2_fpbh = []
+
+        for fpbh in fpbhs:
+
+            signal = fpbh*events*years
+
+            chi2_tot = 0
+
+            for idx, element in enumerate(Ebin):
+                chi2_tot += Chi_sq_bin(signal[idx],eventback[idx],eventdat[idx])
+
+            chi2_fpbh.append(chi2_tot)
+
+            data_final.append([Mpbh,fpbh,chi2_tot])
+
+
+        chi2int = interpolate.interp1d(fpbhs, chi2_fpbh, fill_value="extrapolate")
+        fpbhvec = np.logspace(np.log10(fpbhs[0]), np.log10(fpbhs[-1]))
+        minchi2 = np.amin(chi2int(fpbhvec))
+        fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
+        #fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], fpbhs[-1]  ) )
+
+    np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
+    return data_final, fpbh_bounds
+
 
 def grid_val(ptx,pty,ptz):
 
