@@ -38,6 +38,7 @@ Msun = 1.989e33 # g
 c = 29979245800.0 #cm/s
 MpcToCm = 3.086e24 # 1 Mpc = MpcToCm cm
 GpToCm = 1.e3*MpcToCm
+gr_to_GeV= 5.62 * 1e23
 
 # Black-body approximation
 mass_conversion = 5.60958884e+23 # g to GeV
@@ -84,11 +85,7 @@ def n_pbh(Mpbh):
         return Om_dm*rho_c/(Mpbh)
 
 
-#Mpbhs =  [1.e15, 2.e15, 4.e15, 8.e15]
-Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
 
-fpbhs = np.ones_like(Mpbhs)    # this is beta prime!
-cols = ["r", "m", "purple", "b", "g", "orange"]
 
 # Approx lifetime, in seconds (Carr et al 2010)
 def tau_pbh(M):
@@ -145,6 +142,17 @@ redshift = np.vectorize(redshift)
 
 sectoyear = 3.17098e-8
 
+# age of the universe
+ageuniverse = time_int_a(0., 1.)
+
+
+tvec = np.logspace(-30, np.log10(time_int_a(0., 1.)), 500)
+z_from_t_int = interp1d(tvec, z_from_t(tvec))#, fill_value="extrapolate")
+
+"""plt.loglog(tvec, z_from_t_int(tvec),"r-")
+plt.loglog(tvec, z_from_t(tvec),"b:")
+plt.show()
+exit()"""
 
 """
 timess = np.logspace(-30, 17)
@@ -153,7 +161,8 @@ plt.loglog( timess, redshift(timess), "b:" )
 plt.show()
 exit()
 """
-
+#print(z_from_t(1e9/sectoyear), z_from_t(time_int_a(0., 1.)), time_int_a(0., 1.)*sectoyear/1e9)
+#exit()
 
 """
 for z in [1e10, 1000, 100]:
@@ -162,7 +171,7 @@ for z in [1e10, 1000, 100]:
     print( z, z_from_t(tt) )
 
 
-#print(z_from_t(1e9/sectoyear), z_from_t(time_int_a(0., 1.)), time_int_a(0., 1.)*sectoyear/1e9)
+
 
 
 #zvec = np.logspace(10,0)
@@ -212,7 +221,69 @@ def flux_approx(zmin, zmax, Mpbh, E):  #
 
 flux_approx = np.vectorize( flux_approx )
 
+#---
+# Galactic component (from 2010.16053)
+#---
+
+# Integration in cos(\Phi)=x will be performed
+r_dot=8.5 # kpc
+r_h=200. # kpc
+
+def galactocentric_d(l, cos):
+    return np.sqrt(r_dot**2-2*r_dot*l*cos+l**2)
+
+def NFW_profile(l,cos):
+
+    r=galactocentric_d(l, cos)
+    num=1.+(r_dot/20.)
+    den=1.+(r/20.)
+    return 0.4*( 8.5/r)*(num/den)**2.
+
+def l_max(cos):
+    return np.sqrt(r_h**2. - r_h**2.*(1.-cos**2.)) + r_dot*cos
+
+def galactic_factor():
+
+    #---------------------------------------- 1st integrate in l:
+    cos_vec=np.linspace(-1.,1.,100)
+    Integral_l=[]
+    for cos in cos_vec:
+        #I=integrate.quad(NFW_profile,0.,l_max(cos),args=(cos), epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
+        lvec = np.linspace(0., l_max(cos), 100)
+        I=integrate.simps(NFW_profile(lvec, cos), lvec)
+        #print(I)
+        Integral_l.append(I)
+
+    #---------------------------------------- now integrate in cosine:
+
+    #Int_cos= interp1d(cos_vec,Integral_l)
+    #Int_total=integrate.quad(lambda cos: np.sqrt(1-cos**2)*Int_cos(cos),cos_vec[0],cos_vec[-1], epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
+    Int_total=integrate.simps( np.sqrt(1.-cos_vec**2.)*Integral_l, cos_vec)
+
+    #---- finally the flux should be given according to eq4:  flux= emission * Galactic_contrib * f/M
+    #---- where Galactic_contrib is:
+
+    Galactic_contrib =  Int_total/2.  # (factor of 2 comes from 2pi of integral over 4pi factor of Eq 4.)
+
+    #--- we must add a kpc to cm factor to match units of flux:
+    Final_contrib = MpcToCm*1.e-3*Galactic_contrib # this has units of GeV/cm^2
+
+    return Final_contrib/gr_to_GeV
+
+galacticfactor = galactic_factor()
+
+def galactic_flux(Mpbh, energyrate):
+
+    return n_pbh(Mpbh)/rho_c*energyrate*galacticfactor
+
+
 if __name__ == "__main__":
+
+    Mpbhs =  [1.e15, 2.e15, 4.e15]
+    #Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
+
+    fpbhs = np.ones_like(Mpbhs)    # this is beta prime!
+    cols = ["r", "m", "purple", "b", "g", "orange"]
 
     fluxes_max = []
     for mm, Mpbh in enumerate(Mpbhs):
@@ -257,6 +328,8 @@ if __name__ == "__main__":
 
         fluxes_max.append( max(flux_sec*fpbhs[mm]) )
 
+        flux_galac = galactic_flux(Mpbh, spec_sec(E_sec))
+
         if Mpbh<Mevap:
             fpbhlabel = r" g, $\beta'=$"
         else:
@@ -264,11 +337,13 @@ if __name__ == "__main__":
 
         if plot_fluxes:
 
-            plt.loglog( E_prim, fpbhs[mm]*flux_prim, color = cols[mm], linestyle="-", label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
-            plt.loglog( E_sec, fpbhs[mm]*flux_sec, color = cols[mm], linestyle="--")#, label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
-            plt.loglog( E_sec, fpbhs[mm]*flux_anal, color = cols[mm], linestyle=":")
+            #plt.loglog( E_prim, fpbhs[mm]*flux_prim, color = cols[mm], linestyle="-", label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
+            plt.loglog( E_sec, fpbhs[mm]*flux_sec, color = cols[mm], linestyle="--", label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
+            #plt.loglog( E_sec, fpbhs[mm]*flux_anal, color = cols[mm], linestyle=":")
             #plt.loglog( Evec, fpbhs[mm]*flux_anal(Evec, Mpbh), color = cols[mm], linestyle=":" )#, label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+r" g, $f_{\rm PBH}=$"+scinot(fpbhs[mm]) )
             #plt.loglog( E_sec, fpbhs[mm]*fluxap, linestyle="--", color = cols[mm], lw=4, alpha=0.5 )
+            plt.loglog( E_sec, fpbhs[mm]*flux_galac, linestyle="-", color = cols[mm])
+            plt.loglog( E_sec, fpbhs[mm]*(flux_sec + flux_galac), linestyle="--", color = cols[mm], lw=4, alpha=0.5 )
 
         np.savetxt("BlackHawkData/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
         np.savetxt("BlackHawkData/{:.1e}/flux_prim.txt".format(Mpbh), np.transpose([E_prim, flux_prim]) )
@@ -277,7 +352,7 @@ if __name__ == "__main__":
         flux_max = max(fluxes_max)
         #plt.ylim(1.e-10, 1.e4)
         #plt.xlim(1.e-4, 1.e0)
-        plt.xlim(1.e-6, 1.e-1)
+        plt.xlim(1.e-6, 1.e1)
         plt.ylim(flux_max/1e+15,flux_max*10.)
         plt.legend()
         plt.xlabel('$E{\\rm \,\, (GeV)}$')

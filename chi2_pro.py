@@ -20,8 +20,6 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
     Eback, eventback = back_rate(exp)
     eventback = eventback*years
-    backint = interp1d(Eback, eventback)
-    Ebin = Eback    # Binear?
 
     """Ebin1, Ebin2 = energybins(exp)
     Ebin = np.linspace(Ebin1, Ebin2)
@@ -38,7 +36,6 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
         folder = "folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
         Evec, events = np.loadtxt(folder, unpack=True)
-        evint = interp1d(Evec, events)
 
         for fpbh in fpbhs:
 
@@ -61,18 +58,8 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
     data_final = []
 
     Eback, eventback = back_rate(exp)
+    Eback, eventback = binned_events(Eback, eventback)
     eventback = eventback*years
-    backint = interp1d(Eback, eventback)
-    Ebin = Eback    # Binear?
-
-    """Ebin1, Ebin2 = energybins(exp)
-    Ebin = np.linspace(Ebin1, Ebin2)
-    eventback = backint(Ebin)"""
-
-    """if exp=="SK":
-        Edat, eventdat = EdatSK, datSK
-    else:
-        Edat, eventdat = Eback, eventback"""
 
     eventdat = eventback    # for forecasts, take data as background
 
@@ -82,7 +69,6 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
 
         folder = "folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
         Evec, events = np.loadtxt(folder, unpack=True)
-        evint = interp1d(Evec, events)
 
         chi2_fpbh = []
 
@@ -92,7 +78,7 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
 
             chi2_tot = 0
 
-            for idx, element in enumerate(Ebin):
+            for idx, element in enumerate(Eback):
                 chi2_tot += Chi_sq_bin(signal[idx],eventback[idx],eventdat[idx])
 
             chi2_fpbh.append(chi2_tot)
@@ -140,3 +126,18 @@ def grid_val(ptx,pty,ptz):
     Z_grid= FunVec(Y_grid,X_grid)
 
     return X_grid, Y_grid, Z_grid
+
+# Bound from Poisson chi2 for one single bin
+def bound_anal_chi2_Poi(back, sig):
+    #sig is with fpbh=1
+    chi2_th = 2.71
+    snr = sig/back
+    return brentq( lambda fpbh: 2.71/(2.*back) - (fpbh*snr - np.log(1. + fpbh*snr)), 1.e-7, 1.e5  )
+
+# Bound from approximated chi2 for one single bin for low snr
+def bound_anal_chi2_apr(back, sig):
+    #sig is with fpbh=1
+    chi2_th = 2.71
+    snr = sig/back
+    return np.sqrt(chi2_th(back))/snr
+    #return brentq( lambda fpbh: chi2_th/(back) - (fpbh*snr)**2., 1.e-7, 1.e5  )

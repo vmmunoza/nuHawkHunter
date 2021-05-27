@@ -50,10 +50,14 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
         if Mpbh<Mevap:
             zmin = zevap(Mpbh)
         zmax = (1.+zmin)*1.e5 - 1.
-        print("Mass: {:.1e}, z evaporation: {:.1e}".format( Mpbh, zmin ) )
+        print("Mass: {:.1e}, z min: {:.1e}".format( Mpbh, zmin ) )
 
         flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim)
         flux_sec = flux(zmin, zmax, Mpbh, E_sec, spec_sec)
+
+        if Mpbh>Mevap:
+            flux_galac = galactic_flux(Mpbh, spec_sec(E_sec))
+            flux_sec += flux_galac
 
         fluxes_max.append( max(flux_sec*fpbhs[mm]) )
 
@@ -73,8 +77,10 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
 
         np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
 
-        # Use total only if they evaporate (CHECK THIS)
-        if Mpbh<Mevap:
+        # For masses above ~2.e15, instantaneous flux is equal to the total one
+        #if Mpbh<Mevap:
+        #if Mpbh<3.e15:
+        if Mpbh<3.e33:
 
             #-----------
             # TOT FILES
@@ -118,7 +124,10 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
             #print(d2NdEdt_ts)
             #exit()
 
-            reds = z_from_t(timevec)
+            timevec = timevec[timevec<=ageuniverse]
+
+            reds = z_from_t_int(timevec)
+            #reds = z_from_t(timevec)
             #reds = redshift(timevec)
 
             d2NdEdt_ts = []
@@ -170,16 +179,21 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
                 if finite_differences:
                     integral = 0.
                     for it, t in enumerate(timevec[:-2]):
-                        integral += (timevec[it+1]-timevec[it])*integrand[it]
+                        integral += (timevec[it+1]-timevec[it])*integrand[it]*np.heaviside(ageuniverse-t,0.)
                 else:
-                    integral = integrate.simps( integrand[:finindex]*timevec[:finindex], np.log(timevec[:finindex]) )
+                    integral = integrate.simps( integrand[:finindex]*timevec[:finindex]*np.heaviside(ageuniverse-timevec[:finindex],0.), np.log(timevec[:finindex]) )
 
                 #print(np.mean(d2NdEdt_ts[:,j]*(1.+redshift(timevec))*timevec))
                 flux_tot.append( n_pbh(Mpbh)*integral*c )
                 #print(integral)
             flux_tot = np.array(flux_tot)
 
-            plt.loglog( Evec, fpbhs[mm]*flux_tot, color = cols[mm], linestyle=":" )
+            if Mpbh>Mevap:
+                flux_galac = galactic_flux(Mpbh, spec_sec(Evec))
+                flux_tot += flux_galac
+
+            if plot_fluxes:
+                plt.loglog( Evec, fpbhs[mm]*flux_tot, color = cols[mm], linestyle=":" )
 
             np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([Evec, flux_tot]) )
 
@@ -189,7 +203,8 @@ if __name__=="__main__":
 
     plot_fluxes = 1
 
-    Mpbhs =  [1.e15,  2.e15, 4.e15, 8.e15]
+    Mpbhs = [1.e15, 2.e15]#, 4.e15, 8.e15]
+    #Mpbhs = np.linspace(1.e15, 8.e15, 15)
     #Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
     #Mpbhs =  [1.e10]
     #Mpbhs = np.linspace(1.e15, 1.e16, 10)
