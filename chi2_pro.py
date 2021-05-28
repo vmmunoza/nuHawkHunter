@@ -12,7 +12,9 @@ chi2_th = 2.71
 # s: signal, b: background, d: data
 def Chi_sq_bin(s,b,d):
     return 2.*( s + b -d + d*np.log(d/(s+b)) )
+    #return  (s + b - d)**2./b   # Gaussian approximation
 
+"""
 # Compute the chi2 for a grid of PBH parameters for a given experiment
 def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
@@ -21,14 +23,14 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
     Eback, eventback = back_rate(exp)
     eventback = eventback*years
 
-    """Ebin1, Ebin2 = energybins(exp)
-    Ebin = np.linspace(Ebin1, Ebin2)
-    eventback = backint(Ebin)"""
+    #Ebin1, Ebin2 = energybins(exp)
+    #Ebin = np.linspace(Ebin1, Ebin2)
+    #eventback = backint(Ebin)
 
-    """if exp=="SK":
-        Edat, eventdat = EdatSK, datSK
-    else:
-        Edat, eventdat = Eback, eventback"""
+    #if exp=="SK":
+    #    Edat, eventdat = EdatSK, datSK
+    #else:
+    #    Edat, eventdat = Eback, eventback
 
     eventdat = eventback    # for forecasts, take data as background
 
@@ -50,7 +52,7 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
     np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
     return data_final
-
+"""
 
 # Compute the chi2 for a grid of PBH parameters for a given experiment
 def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
@@ -76,21 +78,24 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
 
             signal = fpbh*events*years
 
-            chi2_tot = 0
+            chi2_tot = 0.
 
-            for idx, element in enumerate(Eback):
-                chi2_tot += Chi_sq_bin(signal[idx],eventback[idx],eventdat[idx])
+            for i, element in enumerate(Eback):
+                chi2_tot += Chi_sq_bin(signal[i], eventback[i], eventdat[i])
 
             chi2_fpbh.append(chi2_tot)
 
             data_final.append([Mpbh,fpbh,chi2_tot])
 
 
+        #chi2int = interpolate.interp1d(np.log10(fpbhs), chi2_fpbh, fill_value="extrapolate")
         chi2int = interpolate.interp1d(fpbhs, chi2_fpbh, fill_value="extrapolate")
-        fpbhvec = np.logspace(np.log10(fpbhs[0]), np.log10(fpbhs[-1]))
-        minchi2 = np.amin(chi2int(fpbhvec))
+        #fpbhvec = np.logspace(np.log10(fpbhs[0]), np.log10(fpbhs[-1]))
+        minchi2 = 0. #np.amin(chi2int(np.log10(fpbhvec)))
         #fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
+        #fpbh_bounds.append( 10.**fsolve( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), -2  ) )
         fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], 1.e5  ) )
+        #fpbh_bounds.append( 10.**brentq( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), np.log10(fpbhs[0]), 2.  ) )
 
     np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
     return data_final, fpbh_bounds

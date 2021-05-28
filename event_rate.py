@@ -39,6 +39,8 @@ fluxatmos_e, fluxatmos_antie = fluxatmos_e*year_sec, fluxatmos_antie*year_sec   
 def event_rate(E_o, E_nu, flux, exp):
 
     fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
+    #fluxint1 = interp1d(np.log(E_nu), np.log(flux), fill_value="extrapolate")
+    #fluxint = lambda E: np.exp(fluxint1(np.log(E)))
 
     if (exp=="SK") or (exp=="HK"):
 
@@ -46,8 +48,8 @@ def event_rate(E_o, E_nu, flux, exp):
             ntot = 2.5e34   # 187 kton
             eps = 0.67      # 1804.03157
         if exp=="SK":
-            ntot = 2.5e34*22.5/187  # Same than HK, 22.5 kton
-            eps = 0.67              # Check
+            ntot = 2.5e34*22.5/187  # Same than HK, but with 22.5 kton
+            eps = 0.74              # From 1804.03157, without neutron capture efficiency. Check
 
         """
         E_e = E_o
@@ -96,11 +98,13 @@ def back_rate(exp):
         backDUNE = np.array([event_rate(Eo, EbackDUNE, fluxatmoslow, exp) for Eo in EbackDUNE])
         return EbackDUNE, backDUNE
 
+# Binned events
 def binned_events(Eback, events, bin=1.):
-    # Binned events
-    #bin = 1.
+
     Ebin = np.arange(Eback[0], Eback[-1], step=bin)[:-1]
-    eventsint = interp1d(Eback, events, fill_value="extrapolate")
+    #eventsint = interp1d(Eback, events, fill_value="extrapolate")
+    eventsint1 = interp1d(np.log(Eback), np.log(events))#, fill_value=0.)
+    eventsint = lambda E: np.exp(eventsint1(np.log(E)))
     eventsbin = []
     for Eb in Ebin:
         eventsbin.append( integrate.quad( eventsint, Eb, Eb+bin )[0] )
@@ -166,7 +170,7 @@ if __name__=="__main__":
 
     #Mpbhs =  [1.e12, 1.e13, 1.e14]
     Mpbhs =  [1e15]#, 2e15, 4.e15]
-    Mpbhs =  [1e15, 2e15, 4.e15]
+    #Mpbhs =  [1e15, 2e15, 4.e15]
     #Mpbhs = np.linspace(1.e15, 1.e16,10)
 
     #fpbhs = np.ones_like(Mpbhs)    # this is beta prime or fpbh
@@ -177,7 +181,7 @@ if __name__=="__main__":
     #exp = "SK"
     exp = "HK"
     #exp = "JUNO"
-    #exp = "DUNE"
+    exp = "DUNE"
 
     compute_events(Mpbhs, fpbhs, exp, plotevents)
 

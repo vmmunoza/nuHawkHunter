@@ -16,6 +16,8 @@ for path in ["figures", "folder_fluxes"]:
 
 def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
 
+    onefile = []
+
     fluxes_max = []
     for mm, Mpbh in enumerate(Mpbhs):
 
@@ -78,9 +80,9 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
         np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
 
         # For masses above ~2.e15, instantaneous flux is equal to the total one
-        #if Mpbh<Mevap:
+        if Mpbh<Mevap:
         #if Mpbh<3.e15:
-        if Mpbh<3.e33:
+        #if Mpbh<3.e33:
 
             #-----------
             # TOT FILES
@@ -197,14 +199,22 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
 
             np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([Evec, flux_tot]) )
 
+            onefile.extend(list(flux_tot))
+
+    masses = []
+    for Mpbh in Mpbhs:
+        masses.extend(list(np.tile(Mpbh, len(Evec))))
+
+    np.savetxt("totalflux.txt", np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )
+
     return fluxes_max
 
 if __name__=="__main__":
 
-    plot_fluxes = 1
+    plot_fluxes = 0
 
     Mpbhs = [1.e15, 2.e15]#, 4.e15, 8.e15]
-    #Mpbhs = np.linspace(1.e15, 8.e15, 15)
+    Mpbhs = np.linspace(1.e15, 8.e15, 15)
     #Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
     #Mpbhs =  [1.e10]
     #Mpbhs = np.linspace(1.e15, 1.e16, 10)

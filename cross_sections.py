@@ -64,6 +64,7 @@ def dsigmadE_IBD(E_nu, E_e):
     # Allowed range of energies for E_nu and E_e
     all_range = 1.#np.heaviside( E_nu - Eth, 0. )#*np.heaviside( E_e - E_1, 0. )*np.heaviside( E_2 - E_e, 0. )
     dsigmadEe = 2.*m_p*dsigmadt*all_range
+    
     return dsigmadEe
 
 """
