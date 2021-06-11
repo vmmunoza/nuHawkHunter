@@ -23,7 +23,8 @@ def blackbody(E, Mpbh):
     else:
         fdistr = ( np.exp( E/Tpbh(Mpbh) ) +1. )**(-1.)
     dNdtdE = gamma(E, Mpbh)*fdistr/(2.*np.pi)
-    return 6.*dNdtdE*mass_conversion**2.*time_conversion    # 6 degrees of freedom, 3 flavours and particle-antiparticle (as in Blackhawk data, I think)
+    return 3.*dNdtdE*mass_conversion**2.*time_conversion     # 3 flavours (as in Blackhawk data, I think)
+    # 6 degrees of freedom, 3 flavours and particle-antiparticle (as in Blackhawk data, I think)
 
 # Extend interpolated spectrum rate 'interp' with the blackbody approximation for high energies > Elim
 def dNdEdt_extension(Elim,interp,E,Mpbh):

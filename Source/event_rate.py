@@ -206,7 +206,7 @@ def compute_events(Mpbhs, fpbhs, exp, plotevents=0):
         folder = "folder_fluxes/{:.1e}/flux.txt".format(Mpbh)
         E_nu, flux = np.loadtxt(folder, unpack=True)
         # From GeV to MeV, seconds to years
-        E_nu, flux = 1.e3*E_nu, 1.e-3*flux/6.*year_sec    # 1/6 for taking only one flavour (ok if secondary are not important)
+        E_nu, flux = 1.e3*E_nu, 1.e-3*flux/3.*year_sec    # 1/3 for taking only one flavour (ok if secondary are not important)
 
         if Mpbh<Mevap:
             fpbhlabel = r" g, $\beta'=$"

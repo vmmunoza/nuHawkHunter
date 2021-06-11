@@ -197,7 +197,8 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
                     finindex = it
                     break
 
-            """plt.loglog(Evec, spec_tot[150,1:],"m:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[2]))
+            """
+            plt.loglog(Evec, spec_tot[150,1:],"m:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[2]))
             plt.loglog(Evec, spec_tot[150,1:],"r:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[150]))
             plt.loglog(Evec, spec_tot[finindex,1:],"g:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[finindex]))
             plt.loglog(Evec, spec_tot[-1,1:],"b:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[-1]))
@@ -213,7 +214,20 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
             plt.ylabel('${\\rm d}N/d E dt \,\, ({\\rm GeV}^{-1}{\\rm s}^{-1})$')
             plt.savefig("figures/dNdEdt_test.pdf", bbox_inches='tight')
             plt.show()
-            exit()"""
+            exit()
+            """
+
+            """
+            plt.loglog(Evec, spec_tot[10,1:],"r-",lw=2,alpha=0.5)
+            plt.loglog(Evec, blackbody(Evec, Mpbh),"b:",lw=2,alpha=0.5)
+            plt.loglog(Evec, spec_sec(Evec), "g--",lw=2,alpha=0.5)
+            arr = blackbody(Evec, Mpbh)/spec_tot[10,1:]
+            print(arr[(Evec> 1.e-2) & (Evec< 1.)])
+            plt.ylim(1.e-10, 1e25)
+            plt.xlim(1.e-3, 1e3)
+            plt.show()
+            exit()
+            """
 
             #xx, yy = np.meshgrid(Evec, timevec)
             #d2NdEdt_ts = Rbf(np.log10(xx), np.log10(yy), np.log10(np.transpose(spec_tot[1:,1:])),kind="linear")
