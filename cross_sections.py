@@ -64,7 +64,7 @@ def dsigmadE_IBD(E_nu, E_e):
     # Allowed range of energies for E_nu and E_e
     all_range = 1.#np.heaviside( E_nu - Eth, 0. )#*np.heaviside( E_e - E_1, 0. )*np.heaviside( E_2 - E_e, 0. )
     dsigmadEe = 2.*m_p*dsigmadt*all_range
-    
+
     return dsigmadEe
 
 """
@@ -83,14 +83,43 @@ def sigmaIBD(E_e):
 
 # nu_e Argon cross section for DUNE
 # From Denton and Suliga mail
-EEAr, sigAr = np.loadtxt("data/XS_nue_40Ar.txt", unpack=True, delimiter=";")
+EEAr, sigAr = np.loadtxt("data/crosssections/XS_nue_40Ar.txt", unpack=True, delimiter=";")
 sigmaAr = interp1d(EEAr, sigAr, fill_value="extrapolate")
 
 # nu_ebar Carbon cross section for JUNO background
-EEC, sigC = np.loadtxt("data/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
+EEC, sigC = np.loadtxt("data/crosssections/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
 sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
 
+def gauss_prof(res, Ee, E_o, offset=0.):
+    #deltaE = res*np.sqrt(E_o)  # in MeV
+    #deltaE = np.sqrt(res**2.*E_o + offset**2.*E_o**2.)  # in MeV
+    #deltaE = res*np.sqrt(E_o) + offset*E_o  # in MeV
+    deltaE = -0.123 + 0.376*np.sqrt(E_o) + 0.0349*E_o
+    return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
+
+gauss_prof = np.vectorize(gauss_prof)
+
+def Enu_from_Ee(Ee):
+    return 1./2.*(np_dif + m_p - np.sqrt(np_dif**2. - 2.*np_dif*m_p - 4.*Ee*m_p + m_p**2.))
+
+EnuIBDtab, sigIBDtab, EeIBD = np.loadtxt("data/crosssections/XS_IBD.txt", unpack=True)
+sigIBDtab *= 1.e-41 # units in cm^2
+
+sigIBD = interp1d(EeIBD, sigIBDtab, fill_value="extrapolate")
+EnuIBD = interp1d(EeIBD, EnuIBDtab, fill_value="extrapolate")
+
 if __name__=="__main__":
+
+    """plt.loglog(EeIBD, sigIBDtab, "r-")
+    plt.loglog(EeIBD, sigmaIBD(EeIBD), "b-")
+    plt.show()
+    exit()"""
+
+    """plt.plot(EeIBD, EnuIBDtab, "r-")
+    plt.plot(EeIBD, 1./2.*(np_dif + m_p - np.sqrt(np_dif**2. - 2.*np_dif*m_p - 4.*EeIBD*m_p + m_p**2.)), "b--")
+    plt.plot(EeIBD, EeIBD + np_dif, "g:")
+    plt.show()
+    exit()"""
 
     def fitfunc(E, A, alp):
         return A*E**alp
@@ -118,12 +147,12 @@ if __name__=="__main__":
     print(np.abs(10.**fitfunc(Eii, *fitparsAr) - sigmaAr(Eii))/sigmaAr(Eii))
     print(np.abs(10.**fitfunc2(Eii, *fitparsC) - sigmaC(Eii))/sigmaC(Eii))
 
-    #EE, sig = np.loadtxt("data/nuAr_XS_Kaes.txt", unpack=True, delimiter=";")
+    #EE, sig = np.loadtxt("data/crosssections/nuAr_XS_Kaes.txt", unpack=True, delimiter=";")
     #sigmaAr = interp1d(EE, sig)
     #plt.plot(EE, sig, "m-", lw=2, alpha=0.7)
     #print(np.abs(sig-sigmaAr(EE))/sig)
 
-    #tab = np.loadtxt("data/xs_nue_Ar40.txt", unpack=True)   # from code SNOwGLoBES https://github.com/SNOwGLoBES/snowglobes/tree/master/xscns
+    #tab = np.loadtxt("data/crosssections/xs_nue_Ar40.txt", unpack=True)   # from code SNOwGLoBES https://github.com/SNOwGLoBES/snowglobes/tree/master/xscns
     #EE, sig = 10.**tab[0]*1.e3, tab[1]*1e-38*1.e-3
     #sigmaAr = interp1d(EE, sig)
     #plt.plot(EE, sig, "b-", lw=2, alpha=0.7)

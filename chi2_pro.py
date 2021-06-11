@@ -6,7 +6,10 @@ from event_rate import *
 from scipy.optimize import fsolve, brentq
 
 years = 10.
-chi2_th = 2.71
+#chi2_th = 1.    # 68.27 CL (1 sigma)
+chi2_th = 2.71  # 90 % CL
+#chi2_th = 3.84  # 95 % CL
+#chi2_th = 4.    # 95.45 % CL (2 sigma)
 
 # Poisson chi2
 # s: signal, b: background, d: data
@@ -55,7 +58,7 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
 """
 
 # Compute the chi2 for a grid of PBH parameters for a given experiment
-def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
+def compute_chi2_2D_mod(Mpbhs, fpbhs, exp, is_DM=True):
 
     data_final = []
 
@@ -92,10 +95,14 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp):
         chi2int = interpolate.interp1d(fpbhs, chi2_fpbh, fill_value="extrapolate")
         #fpbhvec = np.logspace(np.log10(fpbhs[0]), np.log10(fpbhs[-1]))
         minchi2 = 0. #np.amin(chi2int(np.log10(fpbhvec)))
-        #fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
-        #fpbh_bounds.append( 10.**fsolve( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), -2  ) )
-        fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], 1.e5  ) )
-        #fpbh_bounds.append( 10.**brentq( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), np.log10(fpbhs[0]), 2.  ) )
+
+        if is_DM:
+            fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-2  ) )
+            #fpbh_bounds.append( 10.**fsolve( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), -2  ) )
+            #fpbh_bounds.append( brentq( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), fpbhs[0], 1.e5  ) )
+            #fpbh_bounds.append( 10.**brentq( lambda logfpbh: chi2int(logfpbh) - (minchi2 + chi2_th), np.log10(fpbhs[0]), 2.  ) )
+        else:
+            fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-16  ) )
 
     np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
     return data_final, fpbh_bounds

@@ -2,15 +2,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-#!python
-import pylab
-from pylab import arange,pi,sin,cos,sqrt
 from scipy import integrate
 from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
+from matplotlib.lines import Line2D
+import matplotlib as mpl
+mpl.rcParams.update({'font.size': 12})
 
-plot_fluxes = 1
-
+#---
+# Miscelanea
+#---
 
 def scinot(x):      # write in Latex scientific notation
     exp = int(math.floor(math.log10(abs(x))))
@@ -22,6 +23,11 @@ def scinot(x):      # write in Latex scientific notation
             return r"$10^{"+str(exp)+r"}$"
     else:
         return "{:.1f}".format(prefactor)+r"$ \times 10^{"+str(exp)+r"}$"
+
+def find_nearest(array, value, axis=0):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin(axis)
+    return idx
 
 # cosmo
 Om_rad = 9.2e-5
@@ -38,13 +44,14 @@ Msun = 1.989e33 # g
 c = 29979245800.0 #cm/s
 MpcToCm = 3.086e24 # 1 Mpc = MpcToCm cm
 GpToCm = 1.e3*MpcToCm
-gr_to_GeV= 5.62 * 1e23
+gr_to_GeV= 5.62e23
 
 # Black-body approximation
 mass_conversion = 5.60958884e+23 # g to GeV
 time_conversion = 1.519267407e+24 # s to GeV^(-1)
 leng_conversion = 5.06773058e+13 # cm to GeV^(-1)
 G_N = (6.67408e-11*pow(leng_conversion*100.,3.)/(mass_conversion*1000.)/pow(time_conversion,2.))
+
 
 # Hawking temperature, in GeV, Mpbh in g
 def Tpbh(Mpbh):
@@ -62,7 +69,7 @@ def blackbody(E, Mpbh):
     else:
         fdistr = ( np.exp( E/Tpbh(Mpbh) ) +1. )**(-1.)
     dNdtdE = gamma(E, Mpbh)*fdistr/(2.*np.pi)
-    return 6.*dNdtdE*mass_conversion**2.*time_conversion
+    return 6.*dNdtdE*mass_conversion**2.*time_conversion    # 6 degrees of freedom, 3 flavours and particle-antiparticle (as in Blackhawk data, I think)
 
 def dNdEdt_extension(Elim,interp,E,Mpbh):
     if E>Elim:
@@ -82,7 +89,7 @@ def n_pbh(Mpbh):
         # See Carr 2010
         return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
     else:
-        return Om_dm*rho_c/(Mpbh)
+        return Om_dm*rho_c/Mpbh
 
 
 
@@ -225,24 +232,28 @@ flux_approx = np.vectorize( flux_approx )
 # Galactic component (from 2010.16053)
 #---
 
-# Integration in cos(\Phi)=x will be performed
+# Some NFW parameters
 r_dot=8.5 # kpc
 r_h=200. # kpc
+r_s = 20.   # kpc
+rhocentral = 0.4 # GeV/cm^3
 
+# Radial distance as a function of the cosinus and line-of-sight distance
 def galactocentric_d(l, cos):
-    return np.sqrt(r_dot**2-2*r_dot*l*cos+l**2)
+    return np.sqrt(r_dot**2.-2.*r_dot*l*cos+l**2.)
 
+# NFW profile
 def NFW_profile(l,cos):
 
-    r=galactocentric_d(l, cos)
-    num=1.+(r_dot/20.)
-    den=1.+(r/20.)
-    return 0.4*( 8.5/r)*(num/den)**2.
+    r = galactocentric_d(l, cos)
+    return rhocentral*(r_dot/r)*((1.+r_dot/r_s)/(1.+r/r_s))**2.
 
+# Maximum line-of-sight distance
 def l_max(cos):
-    return np.sqrt(r_h**2. - r_h**2.*(1.-cos**2.)) + r_dot*cos
+    return np.sqrt(r_h**2. - r_dot**2.*(1.-cos**2.)) + r_dot*cos
 
-def galactic_factor():
+# D-factor, \int dl \rho_NFW(r(l))
+def D_factor():
 
     #---------------------------------------- 1st integrate in l:
     cos_vec=np.linspace(-1.,1.,100)
@@ -250,113 +261,23 @@ def galactic_factor():
     for cos in cos_vec:
         #I=integrate.quad(NFW_profile,0.,l_max(cos),args=(cos), epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
         lvec = np.linspace(0., l_max(cos), 100)
-        I=integrate.simps(NFW_profile(lvec, cos), lvec)
-        #print(I)
+        I = integrate.simps(NFW_profile(lvec, cos), lvec)
+        #loglvec = np.linspace(np.log(1.e-5), np.log(l_max(cos)), 100)
+        #I = integrate.simps(NFW_profile(np.exp(loglvec), cos)*np.exp(loglvec), loglvec)
         Integral_l.append(I)
 
     #---------------------------------------- now integrate in cosine:
 
     #Int_cos= interp1d(cos_vec,Integral_l)
-    #Int_total=integrate.quad(lambda cos: np.sqrt(1-cos**2)*Int_cos(cos),cos_vec[0],cos_vec[-1], epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
-    Int_total=integrate.simps( np.sqrt(1.-cos_vec**2.)*Integral_l, cos_vec)
-
-    #---- finally the flux should be given according to eq4:  flux= emission * Galactic_contrib * f/M
-    #---- where Galactic_contrib is:
-
-    Galactic_contrib =  Int_total/2.  # (factor of 2 comes from 2pi of integral over 4pi factor of Eq 4.)
+    #Int_total=integrate.quad(lambda cos: Int_cos(cos),cos_vec[0],cos_vec[-1], epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
+    Galactic_contrib = integrate.simps( Integral_l, cos_vec)/2.  # (factor of 2 comes from 2pi of integral over 4pi factor of Eq 4.)
 
     #--- we must add a kpc to cm factor to match units of flux:
-    Final_contrib = MpcToCm*1.e-3*Galactic_contrib # this has units of GeV/cm^2
+    return MpcToCm*1.e-3*Galactic_contrib/gr_to_GeV     # this has units of g/cm^2
 
-    return Final_contrib/gr_to_GeV
+galacticfactor = D_factor()
 
-galacticfactor = galactic_factor()
-
+# Galactic flux (f_PBH=1, scale it afterwards)
 def galactic_flux(Mpbh, energyrate):
 
-    return n_pbh(Mpbh)/rho_c*energyrate*galacticfactor
-
-
-if __name__ == "__main__":
-
-    Mpbhs =  [1.e15, 2.e15, 4.e15]
-    #Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
-
-    fpbhs = np.ones_like(Mpbhs)    # this is beta prime!
-    cols = ["r", "m", "purple", "b", "g", "orange"]
-
-    fluxes_max = []
-    for mm, Mpbh in enumerate(Mpbhs):
-
-        folder = "BlackHawkData/{:.1e}/".format(Mpbh)
-
-        data_primary = np.genfromtxt(folder+"instantaneous_primary_spectra.txt",skip_header = 2)
-        data_secondary = np.genfromtxt(folder+"instantaneous_secondary_spectra.txt",skip_header = 2)
-        E_prim = data_primary[:,0]
-        E_sec = data_secondary[:,0]
-
-        tot_sec = 0.
-        for i in [2,3,4]:   # three neutrino species
-            tot_sec += data_secondary[:,i+1]
-
-        #flux_max = max(tot_sec)
-        #plt.loglog(E_sec,tot_sec, linestyle="--", color=cols[mm])
-        #plt.loglog(E_prim,data_primary[:,6],label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+" g", color=cols[mm])
-
-        spec_prim = interp1d(E_prim,data_primary[:,6],fill_value="extrapolate")
-        spec_sec = interp1d(E_sec,tot_sec,fill_value="extrapolate")
-        #spec_prim = np.vectorize(spec_prim)
-        #spec_sec = np.vectorize(spec_sec)
-
-        zmin = 0.
-        if Mpbh<Mevap:
-            zmin = zevap(Mpbh)
-        zmax = (1.+zmin)*1.e5 - 1.
-        print("Mass: {:.1e}, z evaporation: {:.1e}".format( Mpbh, zmin ) )
-
-
-        """Evec = np.logspace(np.log10(E_prim[0]), np.log10(E_prim[-1]*1000.))
-        plt.loglog(Evec, dNdEdt_extension(E_prim[-1],spec_prim,Evec,Mpbh))
-        plt.loglog(Evec, spec_prim(Evec),"--")
-        plt.show()
-        exit()"""
-
-        flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim)
-        flux_sec = flux(zmin, zmax, Mpbh, E_sec, spec_sec)
-        flux_anal = flux(zmin, zmax, Mpbh, E_sec, spec_sec, 1)
-        #fluxap = flux_approx(zmin, zmax, Mpbh, E_sec)
-
-        fluxes_max.append( max(flux_sec*fpbhs[mm]) )
-
-        flux_galac = galactic_flux(Mpbh, spec_sec(E_sec))
-
-        if Mpbh<Mevap:
-            fpbhlabel = r" g, $\beta'=$"
-        else:
-            fpbhlabel = r" g, $f_{\rm PBH}=$"
-
-        if plot_fluxes:
-
-            #plt.loglog( E_prim, fpbhs[mm]*flux_prim, color = cols[mm], linestyle="-", label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
-            plt.loglog( E_sec, fpbhs[mm]*flux_sec, color = cols[mm], linestyle="--", label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]) )
-            #plt.loglog( E_sec, fpbhs[mm]*flux_anal, color = cols[mm], linestyle=":")
-            #plt.loglog( Evec, fpbhs[mm]*flux_anal(Evec, Mpbh), color = cols[mm], linestyle=":" )#, label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+r" g, $f_{\rm PBH}=$"+scinot(fpbhs[mm]) )
-            #plt.loglog( E_sec, fpbhs[mm]*fluxap, linestyle="--", color = cols[mm], lw=4, alpha=0.5 )
-            plt.loglog( E_sec, fpbhs[mm]*flux_galac, linestyle="-", color = cols[mm])
-            plt.loglog( E_sec, fpbhs[mm]*(flux_sec + flux_galac), linestyle="--", color = cols[mm], lw=4, alpha=0.5 )
-
-        np.savetxt("BlackHawkData/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
-        np.savetxt("BlackHawkData/{:.1e}/flux_prim.txt".format(Mpbh), np.transpose([E_prim, flux_prim]) )
-
-    if plot_fluxes:
-        flux_max = max(fluxes_max)
-        #plt.ylim(1.e-10, 1.e4)
-        #plt.xlim(1.e-4, 1.e0)
-        plt.xlim(1.e-6, 1.e1)
-        plt.ylim(flux_max/1e+15,flux_max*10.)
-        plt.legend()
-        plt.xlabel('$E{\\rm \,\, (GeV)}$')
-        plt.ylabel('${\\rm d}F/d E \,\, ({\\rm GeV}^{-1}{\\rm s}^{-1}{\\rm cm}^{-2})$')
-        plt.savefig("figures/flux.pdf", bbox_inches='tight')
-        plt.show()
-        plt.gcf().clear()
+    return energyrate*galacticfactor/Mpbh

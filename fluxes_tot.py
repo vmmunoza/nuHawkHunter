@@ -39,6 +39,15 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
         for i in [2,3,4]:   # three neutrino species
             tot_sec += data_secondary[:,i+1]
 
+        """plt.loglog(E_sec, data_secondary[:, 3],label="e")
+        plt.loglog(E_sec, data_secondary[:, 4],label=r"$\mu$")
+        plt.loglog(E_sec, data_secondary[:, 5],label=r"$\tau$")
+        plt.ylim(1e18,1.e25)
+        plt.xlim(1e-3,1)
+        plt.legend()
+        plt.show()
+        exit()"""
+
         #flux_max = max(tot_sec)
         #plt.loglog(E_sec,tot_sec, linestyle="--", color=cols[mm])
         #plt.loglog(E_prim,data_primary[:,6],label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+" g", color=cols[mm])
@@ -80,9 +89,9 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
         np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
 
         # For masses above ~2.e15, instantaneous flux is equal to the total one
-        if Mpbh<Mevap:
+        #if Mpbh<Mevap:
         #if Mpbh<3.e15:
-        #if Mpbh<3.e33:
+        if Mpbh<3.e33:
 
             #-----------
             # TOT FILES
@@ -165,7 +174,7 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
             d2NdEdt_ts = np.array(d2NdEdt_ts)
 
 
-            finite_differences = 1
+            finite_differences = 0
 
             """plt.loglog(Evec, d2NdEdt_ts[150,:],":",lw=4,alpha=0.5)
             plt.loglog(Evec, d2NdEdt_ts[250,:],":",lw=4,alpha=0.5)
@@ -191,11 +200,21 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
             flux_tot = np.array(flux_tot)
 
             if Mpbh>Mevap:
-                flux_galac = galactic_flux(Mpbh, spec_sec(Evec))
+                #spec_tot_today = spec_sec(Evec)
+                ind = find_nearest(spec_tot[1:,0], ageuniverse, axis=0)
+                spec_tot_today = spec_tot[1+ind,1:]
+                flux_galac = galactic_flux(Mpbh, spec_tot_today)
                 flux_tot += flux_galac
 
             if plot_fluxes:
-                plt.loglog( Evec, fpbhs[mm]*flux_tot, color = cols[mm], linestyle=":" )
+                if Mpbh>Mevap:
+                    flux_sec = flux_tot-flux_galac
+                    # Change units to MeV
+                    plt.loglog( Evec*1.e3, fpbhs[mm]*flux_sec/1.e3, linestyle="--", color = cols[mm])
+                    plt.loglog( Evec*1.e3, fpbhs[mm]*flux_galac/1.e3, linestyle=":", color = cols[mm])
+                    plt.loglog( Evec*1.e3, fpbhs[mm]*flux_tot/1.e3, linestyle="-", color = cols[mm])
+                else:
+                    plt.loglog( Evec*1.e3, fpbhs[mm]*flux_tot/1.e3, color = cols[mm], linestyle="-" )   # Change units to MeV
 
             np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([Evec, flux_tot]) )
 
@@ -211,28 +230,93 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
 
 if __name__=="__main__":
 
-    plot_fluxes = 0
+    plot_fluxes = 1
+    plot_DM = 0
 
-    Mpbhs = [1.e15, 2.e15]#, 4.e15, 8.e15]
-    Mpbhs = np.linspace(1.e15, 8.e15, 15)
-    #Mpbhs =  [1.e10, 1.e11, 1.e12, 1.e13, 1.e14]
-    #Mpbhs =  [1.e10]
-    #Mpbhs = np.linspace(1.e15, 1.e16, 10)
+    if plot_DM:
+        #Mpbhs =  [1e15, 5e15]#, 2e15, 4e15]
+        Mpbhs =  [1e15, 2e15, 4e15]
+        fpbh = 1.e-4
+        sufix = "DM"
+    else:
+        Mpbhs = [1.e12, 1.e13, 1.e14]
+        fpbh = 1.e-20
+        sufix = "evaporated"
 
-    fpbhs = np.ones_like(Mpbhs)    # this is beta prime!
+    #Mpbhs = np.linspace(1.e15, 8.e15, 15)
+
+    fpbhs = fpbh*np.ones_like(Mpbhs)    # this is beta prime for evaporated PBHs
     cols = ["r", "m", "purple", "b", "g", "orange"]
 
     fluxes_max = compute_flux(Mpbhs, fpbhs, plot_fluxes)
 
     if plot_fluxes:
-        flux_max = max(fluxes_max)
-        #plt.ylim(1.e-10, 1.e4)
-        #plt.xlim(1.e-4, 1.e0)
-        plt.xlim(1.e-6, 1.e0)
-        plt.ylim(flux_max/1e+15,flux_max*10.)
-        plt.legend()
-        plt.xlabel('$E{\\rm \,\, (GeV)}$')
-        plt.ylabel('${\\rm d}F/d E \,\, ({\\rm GeV}^{-1}{\\rm s}^{-1}{\\rm cm}^{-2})$')
-        plt.savefig("figures/flux_tot.pdf", bbox_inches='tight')
+
+        backfolder = "data/backfluxes/"
+
+        # Plot backgrounds
+        Eatm, atm_nue = np.loadtxt(backfolder+"atmnue_noosc_fluka_flux_norm.dat",unpack=True)
+        Eatm, atm_nuebar = np.loadtxt(backfolder+"atmnuebar_noosc_fluka_flux_norm.dat",unpack=True)
+        Eatm, atm_numu = np.loadtxt(backfolder+"atmnumu_noosc_fluka_flux_norm.dat",unpack=True)
+        Eatm, atm_numubar = np.loadtxt(backfolder+"atmnumubar_noosc_fluka_flux_norm.dat",unpack=True)
+        atmflux = atm_nue + atm_nuebar + atm_numu + atm_numubar
+        EB8, sol_B8_1, sol_B8_2, sol_B8_3 = np.loadtxt(backfolder+"B8NeutrinoFlux.dat",unpack=True)
+        sol_B8 = sol_B8_1 + sol_B8_2 + sol_B8_3
+        Ehep, sol_hep = np.loadtxt(backfolder+"HEPNeutrinoFlux.dat",unpack=True)
+        EO15, sol_O15 = np.loadtxt(backfolder+"O15NeutrinoFlux.dat",unpack=True)
+        EN13, sol_N13 = np.loadtxt(backfolder+"N13NeutrinoFlux.dat",unpack=True)
+        Epp, sol_pp = np.loadtxt(backfolder+"PPNeutrinoFlux.dat",unpack=True)
+
+        atmint = interp1d(Eatm, atmflux, fill_value=0., bounds_error=False)
+        B8int = interp1d(EB8, sol_B8, fill_value=0., bounds_error=False)
+        hepint = interp1d(Ehep, sol_hep, fill_value=0., bounds_error=False)
+        O15int = interp1d(EO15, sol_O15, fill_value=0., bounds_error=False)
+        N13int = interp1d(EN13, sol_N13, fill_value=0., bounds_error=False)
+        ppint = interp1d(Epp, sol_pp, fill_value=0., bounds_error=False)
+
+        Ebacks = np.logspace(np.log10(Epp[0]), np.log10(Eatm[-1]), 500)
+        # Sum backgrounds and correct normalization, see table III of 1812.05550 or Table 2 of 1208.5723
+        backmax = atmint(Ebacks) + B8int(Ebacks)*4.59e6 + hepint(Ebacks)*8.31e3 + O15int(Ebacks)*1.56e8 + N13int(Ebacks)*2.17e8 + ppint(Ebacks)*6.03e10
+
+        minback = []
+        for back in [atmflux , sol_B8 , sol_hep , sol_O15 , sol_N13]:
+            minback.append( np.min(back) )
+        minback = np.min(np.array(minback))
+
+        plt.fill_between( Ebacks, np.zeros_like(Ebacks), backmax, color = "b", alpha=0.3)
+
+        plt.text(120., 2.e-3, "Atm.")
+        plt.text(20., 1.e1, r"hep")
+        plt.text(6., 5.e6, r"$^8$B")
+        plt.text(1.7, 1.e7, r"$^{15}$O")
+
+        customlegend = []
+        for n, Mpbh in enumerate(Mpbhs):
+            if Mpbh<Mevap:
+                fpbhlabel = r", $\beta'=$"
+            else:
+                fpbhlabel = r", $f_{\rm PBH}=$"
+            customlegend.append( Line2D([0], [0], color=cols[n], lw=4, label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+" g"))#+fpbhlabel+scinot(fpbhs[mm])))
+
+        if plot_DM:
+
+            customlegend.append( Line2D([0], [0], color="black", linestyle=":", label="Galactic"))
+            customlegend.append( Line2D([0], [0], color="black", linestyle="--", label="Extragalactic"))
+            customlegend.append( Line2D([0], [0], color="black", linestyle="-", label="Total"))
+
+        customlegend.append( Line2D([0], [0], color="b", lw=6, linestyle="-", alpha=0.3, label="Backgrounds"))
+
+        plt.xlim(1., 2.e2)
+        plt.ylim( 1.e-5, 1.e8 )
+        #plt.xlim(0.2, 1.e2)
+        #plt.ylim( 1.e-2, 1.e4 )
+        plt.legend(handles=customlegend, fontsize=10)#, loc="lower left")
+        plt.xlabel('$E{\\rm \,\, [MeV]}$')
+        if plot_DM:
+            plt.title(r"$f_{\rm PBH}=$"+scinot(fpbh))
+        else:
+            plt.title(r"$\beta'=$"+scinot(fpbh))
+        plt.ylabel('$\Phi \,\, [{\\rm MeV}^{-1}{\\rm s}^{-1}{\\rm cm}^{-2}]$')
+        plt.savefig("figures/fluxes_"+sufix+".pdf", bbox_inches='tight')
         plt.show()
         plt.gcf().clear()
