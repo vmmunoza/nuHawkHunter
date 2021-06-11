@@ -224,7 +224,7 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0):
     for Mpbh in Mpbhs:
         masses.extend(list(np.tile(Mpbh, len(Evec))))
 
-    np.savetxt("totalflux.txt", np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )
+    np.savetxt("data/totalflux.txt", np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )
 
     return fluxes_max
 
