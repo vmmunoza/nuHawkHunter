@@ -1,8 +1,12 @@
+#-------------------------------
+# Statistical functions for computing the bounds
+#-------------------------------
+
 import numpy as np
 import pandas as pd
 from scipy import interpolate
 from scipy.interpolate import RectBivariateSpline
-from event_rate import *
+from Source.event_rate import *
 from scipy.optimize import fsolve, brentq
 
 years = 10.

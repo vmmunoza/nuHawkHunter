@@ -1,10 +1,13 @@
+#-------------------------------
+# Compute the event rate at different experiments
+#-------------------------------
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import integrate
 from scipy.interpolate import interp1d, Rbf
-from flux_stuff import *
-from cross_sections import *
+from Source.flux_stuff import *
+from Source.cross_sections import *
 
 #-- Load backgrounds --#
 
@@ -245,31 +248,3 @@ def compute_events(Mpbhs, fpbhs, exp, plotevents=0):
         plt.fill_between(Ebackbin, np.zeros_like(Ebackbin), eventback, color="b", alpha=0.3, label="Background",step="pre")
         if exp=="SK":
             plt.scatter(EdatSK, datSK, color="b", marker="o", label = r"SK-II Data")
-
-
-if __name__=="__main__":
-
-    plotevents = 1
-
-    #Mpbhs =  [1.e12, 1.e13, 1.e14]
-    Mpbhs =  [1e15, 2e15, 4.e15]
-
-    fpbhs = 1.e-2*np.ones_like(Mpbhs)
-    cols = ["r", "purple", "b", "g", "orange"]
-
-    #exp = "SK"
-    exp = "HK"
-    exp = "JUNO"
-    exp = "DUNE"
-
-    compute_events(Mpbhs, fpbhs, exp, plotevents)
-
-    plt.ylim(1.e-3, 2.e2)
-    plt.yscale("log")
-    plt.legend()
-    plt.xlabel('$E{\\rm \,\, [MeV]}$')
-    plt.ylabel('${\\rm d}N/d E \,\, [{\\rm MeV}^{-1}{\\rm yr}^{-1}]$')
-    plt.title(exp)
-    plt.savefig("figures/events_"+exp+".png", bbox_inches='tight')
-    plt.show()
-    plt.gcf().clear()
