@@ -5,7 +5,7 @@ Al imperialismo ni un tantico así.
 It makes use of neutrino fluxes computed with [BlackHawk](https://blackhawk.hepforge.org/).
 It can be employed for Diffuse Supernova Neutrino Background studies by replacing the signal fluxes by the proper ones.
 
-![neutrino fluxes](fluxes_DM.png)
+![neutrino fluxes](figures/fluxes_DM.png)
 
 ## Autoblackhawk
 
