@@ -5,6 +5,7 @@ Al imperialismo ni un tantico así.
 It makes use of neutrino fluxes computed with [BlackHawk](https://blackhawk.hepforge.org/).
 It can be employed for Diffuse Supernova Neutrino Background studies by replacing the signal fluxes by the proper ones.
 
+![neutrino fluxes](fluxes_DM.png)
 
 ## Autoblackhawk
 
@@ -15,7 +16,7 @@ We include the driver `Autoblackhawk.py` to run the BlackHawk code for several m
 
 There are several Jupyter notebooks to plot relevant quantities and compute bounds.
 
-- `plot_neutrino_spectrum.py`: plot spectrum rates from BlackHawk. ** convert to notebook **
+- `plot_neutrino_spectrum.ipynb`: plot spectrum rates from BlackHawk.
 
 - `plot_fluxes.ipynb`: computes the neutrino fluxes from the BlackHawk files.
 

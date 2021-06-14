@@ -11,7 +11,9 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
 from matplotlib.lines import Line2D
 import matplotlib as mpl
-mpl.rcParams.update({'font.size': 12})
+mpl.rcParams.update({'font.size': 18})
+plt.rcParams['figure.figsize'] = [12, 8]
+
 
 # Create some folders if needed
 for path in ["figures", "folder_fluxes"]:

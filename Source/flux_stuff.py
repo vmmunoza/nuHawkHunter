@@ -4,6 +4,10 @@
 
 from Source.evaporation import *
 
+#-------
+# Generic stuff
+#-------
+
 # Number density of PBHs n_pbh at z = 0 (cm^-3)
 # beta and f_pbh defined outside of the function (i.e., f_PBH=1 or beta'=1 for this formula, scale it later)
 def n_pbh(Mpbh):
@@ -12,6 +16,13 @@ def n_pbh(Mpbh):
         return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
     else:
         return Om_dm*rho_c/Mpbh
+
+# Modify the flux for each flavour due to neutrino oscillations (COMPLETE!)
+def flux_oscillations(F_nue, F_numu, F_nutau):
+    Fprime_nue = 0.552238*F_nue + 0.171288*F_numu + 0.276474*F_nutau
+    Fprime_numu = F_numu
+    Fprime_nutau = F_nutau
+    return Fprime_nue, Fprime_numu, Fprime_nutau
 
 #-------
 # Galactic component (from 2010.16053)
@@ -129,9 +140,12 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
             E_prim = data_primary[:,0]
             E_sec = data_secondary[:,0]
 
-            tot_sec = 0.
-            for i in [2,3,4]:   # three neutrino species
-                tot_sec += data_secondary[:,i+1]
+            #tot_sec = 0.
+            #for i in [2,3,4]:   # three neutrino species
+            #    tot_sec += data_secondary[:,i+1]
+
+            spec_tot_e, spec_tot_mu, spec_tot_tau = flux_oscillations(data_secondary[:,3], data_secondary[:,4], data_secondary[:,5])
+            tot_sec = spec_tot_e/2. # 1/2 for taking only neutrino (or antineutrino)
 
             """plt.loglog(E_sec, data_secondary[:, 3],label="e")
             plt.loglog(E_sec, data_secondary[:, 4],label=r"$\mu$")
@@ -197,7 +211,12 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
             timevec = spec_tot_e[1:,0]
             Evec_prim = spec_tot_prim[0,1:]
             timevec_prim = spec_tot_prim[1:,0]
-            spec_tot = spec_tot_e + spec_tot_mu + spec_tot_tau
+
+            # Take into account oscillations
+            spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:] = flux_oscillations(spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:])
+            #spec_tot = spec_tot_e #+ spec_tot_mu + spec_tot_tau
+            spec_tot = spec_tot_e
+            spec_tot[1:,1:] = spec_tot[1:,1:]/2.# 1/2 for taking only neutrino (or antineutrino)
 
             # Total tables repeat time at some point. Find that time and its index
             for it, t in enumerate(timevec):
