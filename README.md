@@ -27,7 +27,7 @@ There are several Jupyter notebooks to plot relevant quantities and compute boun
 
 ## Source
 
-Here is a brief description of the scripts included in Source, where the relevant computations are defined:
+Here is a brief description of the scripts included in `Source`, where the relevant computations are defined:
 
 - `constants.py`: definition of relevant constants and initialization of several packages.
 

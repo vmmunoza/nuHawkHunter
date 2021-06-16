@@ -17,11 +17,11 @@ def n_pbh(Mpbh):
     else:
         return Om_dm*rho_c/Mpbh
 
-# Modify the flux for each flavour due to neutrino oscillations (COMPLETE!)
+# Modify the flux for each flavour due to neutrino oscillations (oscillation angles from 2006.11237)
 def flux_oscillations(F_nue, F_numu, F_nutau):
-    Fprime_nue = 0.552238*F_nue + 0.171288*F_numu + 0.276474*F_nutau
-    Fprime_numu = F_numu
-    Fprime_nutau = F_nutau
+    Fprime_nue = 0.542396*F_nue + 0.176253*F_numu + 0.281351*F_nutau
+    Fprime_numu = 0.176253*F_nue + 0.451522*F_numu + 0.372224*F_nutau
+    Fprime_nutau = 0.281351*F_nue + 0.372224*F_numu + 0.346425*F_nutau
     return Fprime_nue, Fprime_numu, Fprime_nutau
 
 #-------
