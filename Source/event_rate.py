@@ -257,7 +257,7 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
     Eobs, eventback0 = back_rate(exp)
     #eventback0=eventback0/1.e3*10. # factor for plotting ARGO, CHANGE!
-    eventback0=eventback0/1.e6/20. # factor for plotting ARGO, CHANGE!
+    #eventback0=eventback0/1.e6/20. # factor for plotting ARGO, CHANGE!
     if binevents:
         bin = 1.
         if (exp=="DARWIN") or (exp=="ARGO"):
@@ -282,7 +282,7 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
             events.append( event_rate(E_o, E_nu, flux, exp) )
         events = np.array(events)
         #events = 6*events/1.e3*10.  # factor for ARGO, CHANGE!
-        events = 6*events/1.e6/20.  # factor for ARGO, CHANGE!
+        #events = 6*events/1.e6/20.  # factor for ARGO, CHANGE!
 
         if binevents:
             Ebackbin, eventsbin = binned_events(Eobs, events, bin)
