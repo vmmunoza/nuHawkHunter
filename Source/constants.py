@@ -16,7 +16,7 @@ plt.rcParams['figure.figsize'] = [12, 8]
 
 
 # Create some folders if needed
-for path in ["figures", "folder_fluxes"]:
+for path in ["figures", "fluxes", "outputs"]:
     if not os.path.exists(path):
         os.system("mkdir "+path)
 
@@ -52,7 +52,7 @@ sectoyear = 3.17098e-8
 cols = ["r", "m", "purple", "b", "g", "orange"]
 
 # Inital PBH mass (in g) evaporating at the age of the universe
-Mevap = 4.e14
+Mevap = 5.e14
 
 #-------
 # Miscelanea functions

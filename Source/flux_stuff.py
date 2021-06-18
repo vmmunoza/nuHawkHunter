@@ -10,12 +10,13 @@ from Source.evaporation import *
 
 # Number density of PBHs n_pbh at z = 0 (cm^-3)
 # beta and f_pbh defined outside of the function (i.e., f_PBH=1 or beta'=1 for this formula, scale it later)
-def n_pbh(Mpbh):
-    if Mpbh<Mevap:
+def n_pbh(Mpbh, as_DM):
+    if as_DM:
+        return Om_dm*rho_c/Mpbh
+    else:
         # See Carr 2010
         return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
-    else:
-        return Om_dm*rho_c/Mpbh
+
 
 # Modify the flux for each flavour due to neutrino oscillations (oscillation angles from 2006.11237)
 def flux_oscillations(F_nue, F_numu, F_nutau):
@@ -83,7 +84,7 @@ def galactic_flux(Mpbh, energyrate):
 #-------
 
 # Compute the diffuse flux
-def flux(zmin, zmax, Mpbh, E_vec, spec_int, aprox=0):
+def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, aprox=0):
     flux_vec = []
     logonepluszz = np.linspace( np.log(1.+zmin), np.log(1.+zmax) , 100)
     onepluszz = np.exp(logonepluszz)
@@ -93,11 +94,11 @@ def flux(zmin, zmax, Mpbh, E_vec, spec_int, aprox=0):
         else:
             rate = dNdEdt_extension(E_vec[-1],spec_int,E*onepluszz,Mpbh)
         integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
-        flux_vec.append( n_pbh(Mpbh)*integral*c )
+        flux_vec.append( n_pbh(Mpbh, as_DM)*integral*c )
     return np.array(flux_vec)
 
 # Compute the approximated flux (does not work well, it has to be revised)
-def flux_approx(zmin, zmax, Mpbh, E):  #
+def flux_approx(zmin, zmax, Mpbh, E, as_DM):  #
     if E>4.*Tpbh(Mpbh):
         integral = blackbody(E, Mpbh)*dtdz(0.)
     else:
@@ -105,7 +106,7 @@ def flux_approx(zmin, zmax, Mpbh, E):  #
         onepluszz = np.exp(logonepluszz)
         #integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
         integral = E**2.*27.*np.pi*G_N**2.*Mpbh**2.*integrate.simps( dtdz(onepluszz-1.)*onepluszz**2.*onepluszz*onepluszz, logonepluszz )
-    return n_pbh(Mpbh)*integral*c
+    return n_pbh(Mpbh, as_DM)*integral*c
 
 flux_approx = np.vectorize( flux_approx )
 
@@ -114,9 +115,10 @@ flux_approx = np.vectorize( flux_approx )
 # Routine to compute fluxes for a range of PBH masses
 #-------
 
+# as_DM: 1 for PBHs as DM and use f_PBH, otherwise, it uses beta'
 # plot_fluxes: 1 for plotting, 0 otherwise
 # use_inst: if 1, use instantaneous Blackhawk tables (not recommended for masses <2e15), otherwise it employs total tables
-def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
+def compute_flux(Mpbhs, fpbhs, as_DM, plot_fluxes = 0, use_inst = 0):
 
     onefile = []
 
@@ -126,8 +128,8 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
 
         folder = "BlackHawkData/{:.1e}/".format(Mpbh)
 
-        if not os.path.exists("folder_fluxes/{:.1e}".format(Mpbh)):
-            os.system("mkdir "+"folder_fluxes/{:.1e}".format(Mpbh))
+        if not os.path.exists("fluxes/{:.1e}".format(Mpbh)):
+            os.system("mkdir "+"fluxes/{:.1e}".format(Mpbh))
 
         if use_inst:
 
@@ -147,42 +149,22 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
             spec_tot_e, spec_tot_mu, spec_tot_tau = flux_oscillations(data_secondary[:,3], data_secondary[:,4], data_secondary[:,5])
             tot_sec = spec_tot_e/2. # 1/2 for taking only neutrino (or antineutrino)
 
-            """plt.loglog(E_sec, data_secondary[:, 3],label="e")
-            plt.loglog(E_sec, data_secondary[:, 4],label=r"$\mu$")
-            plt.loglog(E_sec, data_secondary[:, 5],label=r"$\tau$")
-            plt.ylim(1e18,1.e25)
-            plt.xlim(1e-3,1)
-            plt.legend()
-            plt.show()
-            exit()"""
-
-            #flux_max = max(tot_sec)
-            #plt.loglog(E_sec,tot_sec, linestyle="--", color=cols[mm])
-            #plt.loglog(E_prim,data_primary[:,6],label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+" g", color=cols[mm])
-
             spec_prim = interp1d(E_prim,data_primary[:,6],fill_value="extrapolate")
             spec_sec = interp1d(E_sec,tot_sec,fill_value="extrapolate")
-            #spec_prim = np.vectorize(spec_prim)
-            #spec_sec = np.vectorize(spec_sec)
 
             zmin = 0.
-            if Mpbh<Mevap:
+            if Mpbh<=Mevap:
                 zmin = zevap(Mpbh)
             # Take an arbitrary large maximum z
             zmax = (1.+zmin)*1.e5 - 1.
             #print("Mass: {:.1e}, z min: {:.1e}".format( Mpbh, zmin ) )
 
-            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim)
-            flux_sec = flux(zmin, zmax, Mpbh, E_sec, spec_sec)
+            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM)
+            flux_sec = flux(zmin, zmax, Mpbh, E_sec, spec_sec, as_DM)
 
             if Mpbh>Mevap:
                 flux_galac = galactic_flux(Mpbh, spec_sec(E_sec))
                 flux_sec += flux_galac
-
-            if Mpbh<Mevap:
-                fpbhlabel = r" g, $\beta'=$"
-            else:
-                fpbhlabel = r" g, $f_{\rm PBH}=$"
 
             if plot_fluxes:
 
@@ -191,26 +173,23 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
                 #plt.loglog( Evec, fpbhs[mm]*flux_anal(Evec, Mpbh), color = cols[mm], linestyle=":" )#, label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+r" g, $f_{\rm PBH}=$"+scinot(fpbhs[mm]) )
                 #plt.loglog( Evec, fpbhs[mm]*flux_approx(Evec, Mpbh), linestyle="--", color = cols[mm] )
 
-            np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([E_sec, flux_sec]) )
+            np.savetxt("fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM), np.transpose([E_sec, flux_sec]) )
 
             # For masses above ~2.e15, instantaneous flux is equal to the total one
-            #if Mpbh<Mevap:
-            #if Mpbh<3.e15:
-            #if Mpbh<3.e33:
         else:
 
             #---------------
             # Total spectra
             #---------------
 
-            spec_tot_prim = np.genfromtxt(folder + "neutrinos_primary_spectrum.txt",skip_header = 1)
+            #spec_tot_prim = np.genfromtxt(folder + "neutrinos_primary_spectrum.txt",skip_header = 1)
             spec_tot_e = np.genfromtxt(folder + "nu_e_secondary_spectrum.txt",skip_header = 1)
             spec_tot_mu = np.genfromtxt(folder + "nu_mu_secondary_spectrum.txt",skip_header = 1)
             spec_tot_tau = np.genfromtxt(folder + "nu_tau_secondary_spectrum.txt",skip_header = 1)
             Evec = spec_tot_e[0,1:]
             timevec = spec_tot_e[1:,0]
-            Evec_prim = spec_tot_prim[0,1:]
-            timevec_prim = spec_tot_prim[1:,0]
+            #Evec_prim = spec_tot_prim[0,1:]
+            #timevec_prim = spec_tot_prim[1:,0]
 
             # Take into account oscillations
             spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:] = flux_oscillations(spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:])
@@ -224,78 +203,24 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
                     finindex = it
                     break
 
-            """
-            plt.loglog(Evec, spec_tot[150,1:],"m:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[2]))
-            plt.loglog(Evec, spec_tot[150,1:],"r:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[150]))
-            plt.loglog(Evec, spec_tot[finindex,1:],"g:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[finindex]))
-            plt.loglog(Evec, spec_tot[-1,1:],"b:",lw=4,alpha=0.5,label=r"$t=${:.1e}".format(timevec[-1]))
-            plt.loglog(Evec_prim, spec_tot_prim[2,1:],"m")
-            plt.loglog(Evec_prim, spec_tot_prim[150,1:],"r")
-            plt.loglog(Evec_prim, spec_tot_prim[finindex,1:],"g")
-            plt.loglog(Evec_prim, spec_tot_prim[-1,1:],"b")
-            #plt.ylim(1.e-29, 1e30)
-            plt.ylim(1.e-10, 1e25)
-            plt.xlim(1., 1e15)
-            plt.legend()
-            plt.xlabel('$E{\\rm \,\, (GeV)}$')
-            plt.ylabel('${\\rm d}N/d E dt \,\, ({\\rm GeV}^{-1}{\\rm s}^{-1})$')
-            plt.savefig("figures/dNdEdt_test.pdf", bbox_inches='tight')
-            plt.show()
-            exit()
-            """
-
-            """
-            plt.loglog(Evec, spec_tot[10,1:],"r-",lw=2,alpha=0.5)
-            plt.loglog(Evec, blackbody(Evec, Mpbh),"b:",lw=2,alpha=0.5)
-            plt.loglog(Evec, spec_sec(Evec), "g--",lw=2,alpha=0.5)
-            arr = blackbody(Evec, Mpbh)/spec_tot[10,1:]
-            print(arr[(Evec> 1.e-2) & (Evec< 1.)])
-            plt.ylim(1.e-10, 1e25)
-            plt.xlim(1.e-3, 1e3)
-            plt.show()
-            exit()
-            """
-
-            #xx, yy = np.meshgrid(Evec, timevec)
-            #d2NdEdt_ts = Rbf(np.log10(xx), np.log10(yy), np.log10(np.transpose(spec_tot[1:,1:])),kind="linear")
-            #print(d2NdEdt_ts)
-            #exit()
-
             timevec = timevec[timevec<=ageuniverse]
 
             reds = z_from_t_int(timevec)
-            #reds = z_from_t(timevec)
-            #reds = redshift(timevec)
+
 
             d2NdEdt_ts = []
             wi = []
             for it, time in enumerate(timevec):
                 d2NdEdt = spec_tot[1+it,1:]
                 d2NdEdt_time = interp1d(Evec,d2NdEdt,fill_value="extrapolate")
-                d2NdEdt_time_prim = interp1d(Evec_prim,spec_tot_prim[1+it,1:],fill_value="extrapolate")
+                #d2NdEdt_time_prim = interp1d(Evec_prim,spec_tot_prim[1+it,1:],fill_value="extrapolate")
 
-                #wi.append( blackbody(Evec*(1.+redshift(time)), Mpbh) )
                 #rateredshift = dNdEdt_extension(Evec[-1]*(1.+reds[it]),d2NdEdt_time,Evec*(1.+reds[it]),Mpbh)
                 rateredshift = d2NdEdt_time(Evec*(1.+reds[it]))
 
                 d2NdEdt_ts.append(  rateredshift )
 
-                #rateredshift = np.zeros_like(Evec)
-
-                """for iE, EE in enumerate(Evec):
-                    if EE*(1.+reds[it])>Evec[-1]:
-                        #rateredshift[iE] = blackbody(EE*(1.+reds[it]), Mpbh)
-                        rateredshift[iE] = d2NdEdt_time_prim(EE*(1.+reds[it]))"""
-
             d2NdEdt_ts = np.array(d2NdEdt_ts)
-
-
-            """plt.loglog(Evec, d2NdEdt_ts[150,:],":",lw=4,alpha=0.5)
-            plt.loglog(Evec, d2NdEdt_ts[250,:],":",lw=4,alpha=0.5)
-            plt.loglog(Evec, wi[150])
-            plt.loglog(Evec, wi[250])
-            plt.show()
-            exit()"""
 
             flux_tot = []
             for j, EE in enumerate(Evec):
@@ -303,7 +228,7 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
                 integrand = d2NdEdt_ts[:,j]*(1.+reds)
                 # Introduce a step function to finish the integral at the current age of the universe
                 integral = integrate.simps( integrand[:finindex]*timevec[:finindex]*np.heaviside(ageuniverse-timevec[:finindex],0.), np.log(timevec[:finindex]) )
-                flux_tot.append( n_pbh(Mpbh)*integral*c )
+                flux_tot.append( n_pbh(Mpbh, as_DM)*integral*c )
 
             flux_tot = np.array(flux_tot)
 
@@ -320,13 +245,19 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
                 if Mpbh>Mevap:
                     flux_sec = flux_tot-flux_galac
                     # Change units to MeV
-                    plt.loglog( Evec*1.e3, fpbhs[mm]*flux_sec/1.e3, linestyle="--", color = cols[mm])
+                    #"""plt.loglog( Evec*1.e3, fpbhs[mm]*flux_sec/1.e3, linestyle="--", color = cols[mm])
                     plt.loglog( Evec*1.e3, fpbhs[mm]*flux_galac/1.e3, linestyle=":", color = cols[mm])
                     plt.loglog( Evec*1.e3, fpbhs[mm]*flux_tot/1.e3, linestyle="-", color = cols[mm])
+                    #"""
+                    """
+                    plt.loglog( Evec*1.e3, Evec*1.e3*fpbhs[mm]*flux_sec/1.e3, linestyle="--", color = cols[mm])
+                    plt.loglog( Evec*1.e3, Evec*1.e3*fpbhs[mm]*flux_galac/1.e3, linestyle=":", color = cols[mm])
+                    plt.loglog( Evec*1.e3, Evec*1.e3*fpbhs[mm]*flux_tot/1.e3, linestyle="-", color = cols[mm])
+                    """
                 else:
                     plt.loglog( Evec*1.e3, fpbhs[mm]*flux_tot/1.e3, color = cols[mm], linestyle="-" )   # Change units to MeV
 
-            np.savetxt("folder_fluxes/{:.1e}/flux.txt".format(Mpbh), np.transpose([Evec, flux_tot]) )
+            np.savetxt("fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM), np.transpose([Evec, flux_tot]) )
 
             onefile.extend(list(flux_tot))
 
@@ -334,4 +265,4 @@ def compute_flux(Mpbhs, fpbhs, plot_fluxes = 0, use_inst = 0):
     for Mpbh in Mpbhs:
         masses.extend(list(np.tile(Mpbh, len(Evec))))
 
-    np.savetxt("data/totalflux_Mpbh_from_{:.1e}_to_{:.1e}.txt".format(Mpbhs[0], Mpbhs[-1]), np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )
+    np.savetxt("outputs/totalflux_Mpbh_from_{:.1e}_to_{:.1e}.txt".format(Mpbhs[0], Mpbhs[-1]), np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )

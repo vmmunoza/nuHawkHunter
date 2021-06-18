@@ -43,7 +43,7 @@ def compute_chi2_2D(Mpbhs, fpbhs, exp):
 
     for Mpbh in Mpbhs:
 
-        folder = "folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
+        folder = "fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
         Evec, events = np.loadtxt(folder, unpack=True)
 
         for fpbh in fpbhs:
@@ -67,7 +67,10 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp, is_DM=True):
     data_final = []
 
     Eback, eventback = back_rate(exp)
-    Eback, eventback = binned_events(Eback, eventback)
+    bin = 1.
+    if (exp=="DARWIN") or (exp=="ARGO"):
+        bin = 5.e-3
+    Eback, eventback = binned_events(Eback, eventback, bin)
     eventback = eventback*years
 
     eventdat = eventback    # for forecasts, take data as background
@@ -76,7 +79,7 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp, is_DM=True):
 
     for Mpbh in Mpbhs:
 
-        folder = "folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
+        folder = "fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
         Evec, events = np.loadtxt(folder, unpack=True)
 
         chi2_fpbh = []
@@ -108,7 +111,7 @@ def compute_chi2_2D_mod(Mpbhs, fpbhs, exp, is_DM=True):
         else:
             fpbh_bounds.append( fsolve( lambda fpbh: chi2int(fpbh) - (minchi2 + chi2_th), 1.e-16  ) )
 
-    np.savetxt("data/chi2_PHB_"+exp+".txt",data_final)
+    np.savetxt("outputs/chi2_PHB_"+exp+".txt",data_final)
     return data_final, fpbh_bounds
 
 

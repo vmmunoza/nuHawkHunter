@@ -50,8 +50,11 @@ Eatmos, fluxatmos_e, fluxatmos_antie = np.loadtxt("data/backfluxes/flux_atmos_e.
 fluxatmos_e, fluxatmos_antie = fluxatmos_e*year_sec, fluxatmos_antie*year_sec   # to yr^-1
 
 
-# From 1804.03157
-# E_o: observed energy (of positron, gamma, etc), E_nu: neutrino energy array
+# Function to compute the event rate for an experiment
+# E_o: observed energy (of positron, gamma, etc)
+# E_nu: neutrino energy array
+# flux: neutrino flux evaluated at E_nu
+# exp: experiment
 def event_rate(E_o, E_nu, flux, exp):
 
     fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
@@ -142,11 +145,41 @@ def event_rate(E_o, E_nu, flux, exp):
 
             return ntot*eps*fluxint(E_o)*sigmaAr(E_o)
 
+
+    # CEnuNS
+    if (exp=="DARWIN") or (exp=="ARGO"):
+        if exp=="ARGO":
+            # Use Argon
+            Z = 18.
+            A = 40.
+            mfrac = 1.  # fraction, used?
+            m_uma = 39.948
+            m_fid = 360.e6  # g
+        if exp=="DARWIN":
+            # Use Xenon
+            Z = 54.
+            A = 132
+            mfrac = 1. # take the most abundant
+            m_uma = 131.293
+            m_fid = 20.e6#40.e6   # g
+            #Atope = np.array([128., 129., 130., 131., 132., 134., 136.])
+            #mfrac = np.array([0.019, 0.264, 0.041, 0.212, 0.269, 0.104, 0.089])
+
+        eps = 1.
+        ntot = m_fid/(m_uma*m_p*1.e-3/gr_to_GeV)*A
+
+        mT = m_p*Z + m_n*(A-Z)
+        E_r = E_o
+        Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
+        return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
+
+
 # Compute the event rates for the backgrounds
+# Returns an array of observed energies (somewhat arbitrary in principle) and the background events
 def back_rate(exp):
 
     if exp=="SK":
-        return EbackSK, backSK
+        return EbackSK - np_dif, backSK
 
     if exp=="HK":
         #EbackHKnew, backHKnew = EbackHK[2:], backHK[2:] # avoid spallation background above 15 MeV
@@ -157,7 +190,7 @@ def back_rate(exp):
         Enuatm, fluxe, fluxebar = Eatmos[2:maxind], fluxatmos_e[2:maxind], fluxatmos_antie[2:maxind]
         backHKCC = np.array([event_rate(Enu - np_dif, Enuatm, fluxebar, exp) for Enu in Enuatm])
         bckHKCC = interp1d(Enuatm, backHKCC, fill_value="extrapolate")
-        return EbackSKinvmu, bacSKinvmu + bckHKCC(EbackSKinvmu)
+        return EbackSKinvmu - np_dif, bacSKinvmu + bckHKCC(EbackSKinvmu)
 
     if exp=="JUNO":
         maxind = 21#23
@@ -183,6 +216,30 @@ def back_rate(exp):
         backDUNE = np.array([event_rate(Eo, EbackDUNE, fluxatmoslow, exp) for Eo in EbackDUNE])
         return EbackDUNE, backDUNE
 
+    if (exp=="DARWIN") or (exp=="ARGO"):
+        # For CEnuNS, observed energies of the order of keV
+        backfolder = "data/backfluxes/"
+        Eatm, atm_nue = np.loadtxt(backfolder+"atmnue_noosc_fluka_flux.dat",unpack=True)
+        Eatm, atm_nuebar = np.loadtxt(backfolder+"atmnuebar_noosc_fluka_flux.dat",unpack=True)
+        Eatm, atm_numu = np.loadtxt(backfolder+"atmnumu_noosc_fluka_flux.dat",unpack=True)
+        Eatm, atm_numubar = np.loadtxt(backfolder+"atmnumubar_noosc_fluka_flux.dat",unpack=True)
+        Eatm*=1.e3 # to MeV
+        atmflux = (atm_nue + atm_nuebar + atm_numu + atm_numubar)/1.e7 # GeV^-1 m^-2 s^-1 -> MeV^-1 cm^-2 s^-1
+        atmint = interp1d(Eatm, atmflux, fill_value=0., bounds_error=False)
+        Ehep, sol_hep = np.loadtxt(backfolder+"HEPNeutrinoFlux.dat",unpack=True)
+        EB8, sol_B8_1, sol_B8_2, sol_B8_3 = np.loadtxt(backfolder+"B8NeutrinoFlux.dat",unpack=True)
+        sol_B8 = sol_B8_1 + sol_B8_2 + sol_B8_3
+        hepint = interp1d(Ehep, sol_hep, fill_value=0., bounds_error=False)
+        B8int = interp1d(EB8, sol_B8, fill_value=0., bounds_error=False)
+        EbackCE = np.logspace(np.log10(EB8[0]), np.log10(Eatm[-1]), 100)
+        # Sum backgrounds and correct normalization, see table III of 1812.05550 or Table 2 of 1208.5723
+        fluxbacks = atmint(EbackCE) + B8int(EbackCE)*4.59e6 + hepint(EbackCE)*8.31e3
+        EobsCE = np.logspace(-4., -1.,200)
+        #EobsCE = np.logspace(np.log10(5.e-3), -1.,100)
+        backCE = np.array([event_rate(Eo, EbackCE, fluxbacks, exp) for Eo in EobsCE])
+
+        return EobsCE, backCE*year_sec
+
 # Bin energies and events
 def binned_events(Eback, events, bin=1.):
 
@@ -196,35 +253,42 @@ def binned_events(Eback, events, bin=1.):
     return Ebin, np.array(eventsbin)/bin
 
 # Compute the event rate for the signal and backgrounds for a range of PBH masses
-def compute_events(Mpbhs, fpbhs, exp, plotevents=0):
+def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
-    Eback, eventback0 = back_rate(exp)
-    Ebackbin, eventback = binned_events(Eback, eventback0)
+    Eobs, eventback0 = back_rate(exp)
+    #eventback0=eventback0/1.e3*10. # factor for plotting ARGO, CHANGE!
+    eventback0=eventback0/1.e6/20. # factor for plotting ARGO, CHANGE!
+    if binevents:
+        bin = 1.
+        if (exp=="DARWIN") or (exp=="ARGO"):
+            bin = 5.e-3
+        Ebackbin, eventback = binned_events(Eobs, eventback0, bin)
 
     for mm, Mpbh in enumerate(Mpbhs):
 
-        folder = "folder_fluxes/{:.1e}/flux.txt".format(Mpbh)
-        E_nu, flux = np.loadtxt(folder, unpack=True)
+        fileflux = "fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM)
+        E_nu, flux = np.loadtxt(fileflux, unpack=True)
         # From GeV to MeV, seconds to years
         E_nu, flux = 1.e3*E_nu, 1.e-3*flux*year_sec
 
-        if Mpbh<Mevap:
-            fpbhlabel = r" g, $\beta'=$"
-        else:
+        if as_DM:
             fpbhlabel = r" g, $f_{\rm PBH}=$"
+        else:
+            fpbhlabel = r" g, $\beta'=$"
 
         events = []
 
-        #Evec = np.linspace(Eback[0], Eback[-1], 200)
-        #for E_o in Evec:
-        for E_o in Eback:
+        for E_o in Eobs:
             events.append( event_rate(E_o, E_nu, flux, exp) )
         events = np.array(events)
+        #events = 6*events/1.e3*10.  # factor for ARGO, CHANGE!
+        events = 6*events/1.e6/20.  # factor for ARGO, CHANGE!
 
-        Ebackbin, eventsbin = binned_events(Eback, events)
-        #Ebackbin, eventsbin = binned_events(Evec, events)
-
-        np.savetxt("folder_fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh,exp), np.transpose([Ebackbin, eventsbin]) )
+        if binevents:
+            Ebackbin, eventsbin = binned_events(Eobs, events, bin)
+            np.savetxt("fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh,exp), np.transpose([Ebackbin, eventsbin]) )
+        else:
+            np.savetxt("fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh,exp), np.transpose([Eobs, events]) )
 
         """
         print("\nMpbh",np.log10(Mpbh))
@@ -238,13 +302,17 @@ def compute_events(Mpbhs, fpbhs, exp, plotevents=0):
         """
 
         if plotevents:
-            #plt.plot(Ebackbin, fpbhs[mm]*eventsbin, color=cols[mm], label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]))
-            plt.step(Ebackbin, fpbhs[mm]*eventsbin, color=cols[mm], label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]))
-
-        #return Eback, events
+            if binevents:
+                plt.step(Ebackbin, fpbhs[mm]*eventsbin, color=cols[mm], label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]))
+            else:
+                plt.plot(Eobs, fpbhs[mm]*events, color=cols[mm], label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]))
 
     if plotevents:
-        plt.xlim(Ebackbin[0], Ebackbin[-1])
-        plt.fill_between(Ebackbin, np.zeros_like(Ebackbin), eventback, color="b", alpha=0.3, label="Background",step="pre")
+        if binevents:
+            plt.xlim(Ebackbin[0], Ebackbin[-1])
+            plt.fill_between(Ebackbin, np.zeros_like(Ebackbin), eventback, color="b", alpha=0.3, label="Background",step="pre")
+        else:
+            plt.xlim(Eobs[0], Eobs[-1])
+            plt.fill_between(Eobs, np.zeros_like(Eobs), eventback0, color="b", alpha=0.3, label="Background")
         if exp=="SK":
             plt.scatter(EdatSK, datSK, color="b", marker="o", label = r"SK-II Data")

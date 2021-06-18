@@ -7,6 +7,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 
+#--------------------------
+# Inverse Beta Decay (IBD)
+#--------------------------
 
 # IBD cross section constants, from Strumia and Vissani 2003
 m_e = 0.511  # MeV
@@ -23,7 +26,6 @@ xi = 3.706
 g1_0 = -1.270
 Eth = ((m_n + m_e)**2. - m_p**2.)/(2.*m_p)  # nu threshold in cross section, 1.8057 MeV
 delta = (m_n**2. - m_p**2. - m_e**2.)/(2.*m_p)
-
 E_nu_th = np_dif + m_e   # nu threshold 1.804 MeV
 
 
@@ -84,15 +86,6 @@ exit()
 def sigmaIBD(E_e):
     return 9.52e-44*( E_e*np.sqrt(E_e**2. - m_e**2.) )*(1. - 7.*(E_e + np_dif)/m_p )
 
-# nu_e Argon cross section for DUNE
-# From Denton and Suliga mail
-EEAr, sigAr = np.loadtxt("data/crosssections/XS_nue_40Ar.txt", unpack=True, delimiter=";")
-sigmaAr = interp1d(EEAr, sigAr, fill_value="extrapolate")
-
-# nu_ebar Carbon cross section for JUNO background
-EEC, sigC = np.loadtxt("data/crosssections/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
-sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
-
 def gauss_prof(res, Ee, E_o, offset=0.):
     #deltaE = res*np.sqrt(E_o)  # in MeV
     #deltaE = np.sqrt(res**2.*E_o + offset**2.*E_o**2.)  # in MeV
@@ -111,7 +104,58 @@ sigIBDtab *= 1.e-41 # units in cm^2
 sigIBD = interp1d(EeIBD, sigIBDtab, fill_value="extrapolate")
 EnuIBD = interp1d(EeIBD, EnuIBDtab, fill_value="extrapolate")
 
+#-----------
+# CEnuNS
+#-----------
+
+MeVtofm = 0.0050677312
+sin2thetaw = 0.231  # sin2 of the Weinberg angle
+cm2invGeV = 5.06773058e+13 # cm to GeV^(-1)
+
+# Helm form factor, from Lewin & Smith 1996, "Review of mathematics, numerical factors, and corrections for dark matter experiments based on elastic nuclear recoil"
+def helm_factor(E_r, A, Z, mT):
+    q = np.sqrt(2.*mT*E_r)*MeVtofm    # check this q
+    a_Helm, c_Helm, s_Helm = 0.52, 1.23*A**(1./3.) - 0.6, 0.9  # all in fm
+    r_n = np.sqrt( c_Helm**2. +7./3.*np.pi**2.*a_Helm**2. - 5.*s_Helm**2. )
+    # r_n = 1.14*A**(1./3.)  # approximation
+    j1 = np.sin(q*r_n)/(q*r_n)**2. - np.cos(q*r_n)/(q*r_n)  # Spherical Bessel function of first kind
+    F_Helm = 3.*j1/(q*r_n)*np.exp(-(q*s_Helm)**2./2.)
+    return F_Helm**2.
+
+# Maximum E_r (MeV)
+def E_r_max(E_nu, mT):
+    return 2.*E_nu**2./(mT + 2.*E_nu)
+
+# Minimum neutrino energy for coherent scattering (MeV)
+def E_nu_min_CE(E_r, mT):
+    return np.sqrt(E_r*mT/2.)
+
+# CEnuNS cross section (cm^2/MeV)
+def sigma_diff_CEnuNS(E_nu, E_r, A, Z, mT):
+    Qw = (A - Z) - Z*(1. - 4.*sin2thetaw)
+    return G_F**2.*Qw**2.*mT/(4.*np.pi)*(1. - mT*E_r/(2.*E_nu**2.))*helm_factor(E_r, A, Z, mT)*(1./cm2invGeV)**2./1.e6   # last factor stands for units conversion GeV^-4 MeV -> cm^2/MeV
+
+#---------
+# Others
+#---------
+
+# nu_e Argon cross section for DUNE
+# From Denton and Suliga mail
+EEAr, sigAr = np.loadtxt("data/crosssections/XS_nue_40Ar.txt", unpack=True, delimiter=";")
+sigmaAr = interp1d(EEAr, sigAr, fill_value="extrapolate")
+
+# nu_ebar Carbon cross section for JUNO background
+EEC, sigC = np.loadtxt("data/crosssections/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
+sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
+
+# This is for debugging plots
 if __name__=="__main__":
+
+    """E_r = np.logspace(-4, 1)
+    E_nu = 20.
+    plt.loglog(E_r,sigma_diff_CEnuNS(E_nu, E_r, 40, 18, m_p*40))
+    plt.show()
+    exit()"""
 
     """plt.loglog(EeIBD, sigIBDtab, "r-")
     plt.loglog(EeIBD, sigmaIBD(EeIBD), "b-")
