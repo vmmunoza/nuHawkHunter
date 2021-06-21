@@ -17,7 +17,7 @@ m_p = 938.272 # MeV
 m_n = 939.565   # MeV
 np_dif =  m_n - m_p # 1.293 MeV
 Mnp = (m_p + m_n)/2. # 938.9 MeV
-G_F = 1.166e-5  # GeV^-2
+G_F = 1.16647e-5  # GeV^-2
 costhetaC = 0.9746  # cosine of Cabibbo angle
 M_V = np.sqrt(0.71) # MeV
 M_A = 1.    # MeV
@@ -29,7 +29,7 @@ delta = (m_n**2. - m_p**2. - m_e**2.)/(2.*m_p)
 E_nu_th = np_dif + m_e   # nu threshold 1.804 MeV
 
 
-# From Strumia and Vissani 2003
+# From Strumia and Vissani 2003 (NOT EMPLOYED YET)
 def dsigmadE_IBD(E_nu, E_e):
 
     # Mandelstam variables
@@ -72,16 +72,6 @@ def dsigmadE_IBD(E_nu, E_e):
 
     return dsigmadEe
 
-"""
-E_ovec = np.linspace(2.,50)
-plt.loglog(E_ovec, dsigmadE_IBD(E_ovec, 1.))
-plt.loglog(E_ovec, dsigmadE_IBD(E_ovec, 10.))
-plt.loglog(E_ovec, dsigmadE_IBD(E_ovec, 20.))
-
-plt.show()
-exit()
-"""
-
 # From 1712.06985, in cm^2, correction from Beacom DSNB review
 def sigmaIBD(E_e):
     return 9.52e-44*( E_e*np.sqrt(E_e**2. - m_e**2.) )*(1. - 7.*(E_e + np_dif)/m_p )
@@ -95,6 +85,7 @@ def gauss_prof(res, Ee, E_o, offset=0.):
 
 gauss_prof = np.vectorize(gauss_prof)
 
+# It doesn't work very well
 def Enu_from_Ee(Ee):
     return 1./2.*(np_dif + m_p - np.sqrt(np_dif**2. - 2.*np_dif*m_p - 4.*Ee*m_p + m_p**2.))
 
@@ -118,6 +109,7 @@ def helm_factor(E_r, A, Z, mT):
     a_Helm, c_Helm, s_Helm = 0.52, 1.23*A**(1./3.) - 0.6, 0.9  # all in fm
     r_n = np.sqrt( c_Helm**2. +7./3.*np.pi**2.*a_Helm**2. - 5.*s_Helm**2. )
     # r_n = 1.14*A**(1./3.)  # approximation
+    #qr = q*r_n
     j1 = np.sin(q*r_n)/(q*r_n)**2. - np.cos(q*r_n)/(q*r_n)  # Spherical Bessel function of first kind
     F_Helm = 3.*j1/(q*r_n)*np.exp(-(q*s_Helm)**2./2.)
     return F_Helm**2.
@@ -150,6 +142,32 @@ sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
 
 # This is for debugging plots
 if __name__=="__main__":
+
+    """A, Z, mT = 137, 55, 137*m_p
+    from scipy import integrate
+    Enuvec = np.linspace(5, 55, 100)
+    XS = []
+    for E_nu in Enuvec:
+        Ervec = np.linspace(1.e-5, E_r_max(E_nu, mT) )
+        XS.append(integrate.simps( sigma_diff_CEnuNS(E_nu, Ervec, A, Z, mT), Ervec))
+    plt.plot(Enuvec, XS)
+    plt.yscale("log")
+    plt.show()
+    exit()"""
+
+    """E_r = np.linspace(0.0001, 0.05, 200)
+    plt.plot(E_r, helm_factor(E_r, 133, 55, 133*m_p))
+    plt.ylim(0,1)
+    plt.xlim(0,0.05)
+    plt.show()
+    exit()"""
+
+    """E_nu = np.linspace(5, 55)
+    E_r = 1.e-3
+    plt.plot(E_nu, E_r*sigma_diff_CEnuNS(E_nu, E_r, 133, 133/2, m_p*133))   # cesium
+    plt.yscale("log")
+    plt.show()
+    exit()"""
 
     """E_r = np.logspace(-4, 1)
     E_nu = 20.

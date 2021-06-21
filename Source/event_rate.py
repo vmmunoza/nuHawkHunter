@@ -166,7 +166,8 @@ def event_rate(E_o, E_nu, flux, exp):
             #mfrac = np.array([0.019, 0.264, 0.041, 0.212, 0.269, 0.104, 0.089])
 
         eps = 1.
-        ntot = m_fid/(m_uma*m_p*1.e-3/gr_to_GeV)*A
+        ntot = m_fid*(gr_to_GeV*1.e3)/(m_uma*m_p)#*A
+        #print(exp, ntot)
 
         mT = m_p*Z + m_n*(A-Z)
         E_r = E_o
@@ -228,7 +229,7 @@ def back_rate(exp):
         atmint = interp1d(Eatm, atmflux, fill_value=0., bounds_error=False)
         Ehep, sol_hep = np.loadtxt(backfolder+"HEPNeutrinoFlux.dat",unpack=True)
         EB8, sol_B8_1, sol_B8_2, sol_B8_3 = np.loadtxt(backfolder+"B8NeutrinoFlux.dat",unpack=True)
-        sol_B8 = sol_B8_1 + sol_B8_2 + sol_B8_3
+        sol_B8 = sol_B8_1 #+ sol_B8_2 + sol_B8_3
         hepint = interp1d(Ehep, sol_hep, fill_value=0., bounds_error=False)
         B8int = interp1d(EB8, sol_B8, fill_value=0., bounds_error=False)
         EbackCE = np.logspace(np.log10(EB8[0]), np.log10(Eatm[-1]), 100)
@@ -256,8 +257,8 @@ def binned_events(Eback, events, bin=1.):
 def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
     Eobs, eventback0 = back_rate(exp)
-    #eventback0=eventback0/1.e3*10. # factor for plotting ARGO, CHANGE!
-    #eventback0=eventback0/1.e6/20. # factor for plotting ARGO, CHANGE!
+    eventback0=eventback0/1.e3*10.#/1e2 # factor for plotting ARGO, CHANGE!
+
     if binevents:
         bin = 1.
         if (exp=="DARWIN") or (exp=="ARGO"):
@@ -266,23 +267,28 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
     for mm, Mpbh in enumerate(Mpbhs):
 
+        #"""
         fileflux = "fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM)
         E_nu, flux = np.loadtxt(fileflux, unpack=True)
         # From GeV to MeV, seconds to years
         E_nu, flux = 1.e3*E_nu, 1.e-3*flux*year_sec
+        """
+        fileflux = "CEvENS_flux_bkg.csv"
+        E_nu, flux = np.loadtxt(fileflux, unpack=True,delimiter=",")
+        E_nu, flux = E_nu, flux*year_sec/1.e3*10."""
+
 
         if as_DM:
             fpbhlabel = r" g, $f_{\rm PBH}=$"
         else:
             fpbhlabel = r" g, $\beta'=$"
 
-        events = []
 
-        for E_o in Eobs:
-            events.append( event_rate(E_o, E_nu, flux, exp) )
-        events = np.array(events)
-        #events = 6*events/1.e3*10.  # factor for ARGO, CHANGE!
-        #events = 6*events/1.e6/20.  # factor for ARGO, CHANGE!
+
+        events = np.array( [event_rate(E_o, E_nu, flux, exp) for E_o in Eobs] )
+        if (exp=="DARWIN") or (exp=="ARGO"):
+            events = 6.*events   # 6 dof
+        events = events/1.e3*10.  # factor for ARGO, CHANGE!"""
 
         if binevents:
             Ebackbin, eventsbin = binned_events(Eobs, events, bin)
