@@ -235,8 +235,8 @@ def back_rate(exp):
         EbackCE = np.logspace(np.log10(EB8[0]), np.log10(Eatm[-1]), 100)
         # Sum backgrounds and correct normalization, see table III of 1812.05550 or Table 2 of 1208.5723
         fluxbacks = atmint(EbackCE) + B8int(EbackCE)*4.59e6 + hepint(EbackCE)*8.31e3
-        EobsCE = np.logspace(-4., -1.,200)
-        #EobsCE = np.logspace(np.log10(5.e-3), -1.,100)
+        #EobsCE = np.logspace(-4., -1.,200)
+        EobsCE = np.logspace(np.log10(5.e-3), -1.,100)
         backCE = np.array([event_rate(Eo, EbackCE, fluxbacks, exp) for Eo in EobsCE])
 
         return EobsCE, backCE*year_sec
@@ -251,13 +251,13 @@ def binned_events(Eback, events, bin=1.):
     eventsbin = []
     for Eb in Ebin:
         eventsbin.append( integrate.quad( eventsint, Eb, Eb+bin )[0] )
-    return Ebin, np.array(eventsbin)/bin
+    return Ebin, np.array(eventsbin)#/bin
 
 # Compute the event rate for the signal and backgrounds for a range of PBH masses
 def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
     Eobs, eventback0 = back_rate(exp)
-    eventback0=eventback0/1.e3*10.#/1e2 # factor for plotting ARGO, CHANGE!
+    #eventback0=eventback0/1.e3*10.#/1e2 # factor for plotting ARGO, CHANGE!
 
     if binevents:
         bin = 1.
@@ -288,7 +288,7 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
         events = np.array( [event_rate(E_o, E_nu, flux, exp) for E_o in Eobs] )
         if (exp=="DARWIN") or (exp=="ARGO"):
             events = 6.*events   # 6 dof
-        events = events/1.e3*10.  # factor for ARGO, CHANGE!"""
+        #events = events/1.e3*10.  # factor for ARGO, CHANGE!"""
 
         if binevents:
             Ebackbin, eventsbin = binned_events(Eobs, events, bin)
