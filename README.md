@@ -7,6 +7,7 @@ It can be employed for Diffuse Supernova Neutrino Background studies by replacin
 
 <img src="figures/fluxes_DM.png" width="60%">
 
+In the following we present a brief explanation of the scripts included.
 
 ## Autoblackhawk
 
