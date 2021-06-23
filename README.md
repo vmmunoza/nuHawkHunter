@@ -48,8 +48,6 @@ Here is a brief description of the scripts included in `Source`, where the relev
 
 ## Stuff to do
 
-- Incluir el cálculo de coherent scattering para DARWIN y otros. Implementar la cross section correspondiente en `cross_sections.py` (sacarla de draft y de código de Sam) y el event rate y backgrounds en `event_rate.py`
-
 - Calcular correctamente los backgrounds NC para JUNO, para lo que hace falta incluir más cross sections.
 
 - Para el IBD, se usa la cross section total en vez de integrar la diferencial, porque esto me da problemas numéricos. Buena aproximación? Solucionar!

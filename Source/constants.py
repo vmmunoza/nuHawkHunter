@@ -16,7 +16,7 @@ plt.rcParams['figure.figsize'] = [12, 8]
 
 
 # Create some folders if needed
-for path in ["figures", "fluxes", "outputs"]:
+for path in ["figures", "fluxes"]:
     if not os.path.exists(path):
         os.system("mkdir "+path)
 
