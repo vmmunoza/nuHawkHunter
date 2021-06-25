@@ -21,7 +21,10 @@ def chi2_Poisson(s,b,d):
     #return  (s + b - d)**2./b   # Gaussian approximation
 
 # From a list of PBH masses, compute the chi2 and the bound on the abundance for a given experiment
-def pbh_bounds_chi2(Mpbhs, fpbhs, exp, is_DM=True):
+def pbh_bounds_chi2(Mpbhs, fpbhs, exp, is_DM, mass_spec, sig):
+
+    # Sufix for outputs depending on the mass function
+    sufx = sufix(mass_spec, sig)
 
     Eback, eventback = back_rate(exp)
     bin = 1.
@@ -36,7 +39,7 @@ def pbh_bounds_chi2(Mpbhs, fpbhs, exp, is_DM=True):
 
     for Mpbh in Mpbhs:
 
-        folder = "fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh, exp)
+        folder = "fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp)+sufx
         Evec, events = np.loadtxt(folder, unpack=True)
 
         chi2_fpbh = []

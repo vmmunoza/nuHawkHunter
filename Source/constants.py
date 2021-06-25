@@ -52,7 +52,8 @@ sectoyear = 3.17098e-8
 cols = ["r", "m", "purple", "b", "g", "orange"]
 
 # Inital PBH mass (in g) evaporating at the age of the universe
-Mevap = 5.e14
+Mevap = 7.8e14  # estimation from BlackHawk results
+# other estimates give 5.e14
 
 #-------
 # Miscelanea functions

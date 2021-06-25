@@ -25,6 +25,14 @@ def flux_oscillations(F_nue, F_numu, F_nutau):
     Fprime_nutau = 0.281351*F_nue + 0.372224*F_numu + 0.346425*F_nutau
     return Fprime_nue, Fprime_numu, Fprime_nutau
 
+# Sufix for text files, depending on if mass function is monochromatic (mc) or lognormal (ln), specifying sigma in the later case
+def sufix(mass_spec, sig = 0):
+    if mass_spec==0:
+        sufix = "_mc.txt"
+    elif mass_spec==1:
+        sufix = "_ln_sig_{:.1e}.txt".format(sig)
+    return sufix
+
 #-------
 # Galactic component (from 2010.16053)
 #-------
@@ -116,9 +124,13 @@ flux_approx = np.vectorize( flux_approx )
 #-------
 
 # as_DM: 1 for PBHs as DM and use f_PBH, otherwise, it uses beta'
+# mass_spec: mass spectrum, 0 for monochromatic, 1 for lognormal
+# sig: variance for lognormal mass spectrum (only used if mass_spec=1)
 # use_inst: if 1, use instantaneous Blackhawk tables (not recommended for masses <2e15), otherwise it employs total tables
 # flux normalization assumes fpbh=1 (for PBHs as DM, as_DM=1) or beta'=1 (for as_DM=0)
-def compute_flux(Mpbhs, as_DM, use_inst = 0):
+def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
+
+    sufx = sufix(mass_spec, sig)
 
     # This will be filled by PBH mass, energy and flux, not used in this code, for exporting only
     onefile = []
@@ -138,8 +150,8 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
             # Instantaneous spectra
             #---------------
 
-            data_primary = np.genfromtxt(folder+"instantaneous_primary_spectra.txt",skip_header = 2)
-            data_secondary = np.genfromtxt(folder+"instantaneous_secondary_spectra.txt",skip_header = 2)
+            data_primary = np.genfromtxt(folder+"instantaneous_primary_spectra"+sufx, skip_header = 2)
+            data_secondary = np.genfromtxt(folder+"instantaneous_secondary_spectra"+sufx, skip_header = 2)
             E_prim = data_primary[:,0]
             Evec = data_secondary[:,0]
 
@@ -153,9 +165,9 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
             spec_prim = interp1d(E_prim,data_primary[:,6],fill_value="extrapolate")
             spec_sec = interp1d(Evec,tot_sec,fill_value="extrapolate")
 
-            zmin = 0.
-            if Mpbh<=Mevap:
-                zmin = zevap(Mpbh)
+            #zmin = 0.
+            #if Mpbh<Mevap:
+            zmin = np.max(0., zevap(Mpbh))
             # Take an arbitrary large maximum z
             zmax = (1.+zmin)*1.e5 - 1.
             #print("Mass: {:.1e}, z min: {:.1e}".format( Mpbh, zmin ) )
@@ -163,14 +175,14 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
             flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM)
             flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM)
 
-            if Mpbh>Mevap:
+            if Mpbh>=Mevap:
                 flux_galac = galactic_flux(Mpbh, spec_sec(Evec))
                 flux_sec += flux_galac/1.e3     # Change units to MeV (factor 1.e3)
 
             # Change units to MeV (factor 1.e3)
             Evec, flux_prim, flux_sec = Evec*1.e3, flux_prim/1.e3, flux_sec/1.e3
 
-            np.savetxt("fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM), np.transpose([Evec, flux_sec]) )
+            np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_sec]) )
 
             onefile.extend(list(flux_sec))
 
@@ -181,12 +193,13 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
             # Total spectra
             #---------------
 
-            #spec_tot_prim = np.genfromtxt(folder + "neutrinos_primary_spectrum.txt",skip_header = 1)
-            spec_tot_e = np.genfromtxt(folder + "nu_e_secondary_spectrum.txt",skip_header = 1)
-            spec_tot_mu = np.genfromtxt(folder + "nu_mu_secondary_spectrum.txt",skip_header = 1)
-            spec_tot_tau = np.genfromtxt(folder + "nu_tau_secondary_spectrum.txt",skip_header = 1)
+            #spec_tot_prim = np.genfromtxt(folder + "neutrinos_primary_spectrum"+sufix,skip_header = 1)
+            spec_tot_e = np.genfromtxt(folder + "nu_e_secondary_spectrum"+sufx,skip_header = 1)
+            spec_tot_mu = np.genfromtxt(folder + "nu_mu_secondary_spectrum"+sufx,skip_header = 1)
+            spec_tot_tau = np.genfromtxt(folder + "nu_tau_secondary_spectrum"+sufx,skip_header = 1)
             Evec = spec_tot_e[0,1:]
             timevec = spec_tot_e[1:,0]
+
             #Evec_prim = spec_tot_prim[0,1:]
             #timevec_prim = spec_tot_prim[1:,0]
 
@@ -198,9 +211,18 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
 
             # Total tables repeat time at some point. Find that time and its index
             for it, t in enumerate(timevec):
-                if timevec[it-1]==t:
+                if timevec[it+1]==t:
                     finindex = it
                     break
+
+            timevec = timevec[:finindex+1]
+
+            #ind = find_nearest(timevec, ageuniverse, axis=0)
+            #spec_tot_today = spec_tot[1+ind,1:]/1.e3    # Change units to MeV (factor 1.e3)
+            #plt.loglog(Evec*1.e3, spec_tot_today, label="{:.1e}".format(Mpbh))
+            #print(ind, spec_tot_e[ind+1,0], finindex, spec_tot_e[finindex+1,0])
+            #print(spec_tot_e[finindex+1,0])
+
 
             timevec = timevec[timevec<=ageuniverse]
 
@@ -233,7 +255,7 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
             Evec, flux_tot = Evec*1.e3, np.array(flux_tot)/1.e3
 
             # If PBHS are DM, include galactic contribution
-            if Mpbh>Mevap:
+            if Mpbh>=Mevap:
                 #spec_tot_today = spec_sec(Evec)
                 # Find the spectrum evaluated at the current age of the universe
                 ind = find_nearest(spec_tot[1:,0], ageuniverse, axis=0)
@@ -241,10 +263,10 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
                 flux_galac = galactic_flux(Mpbh, spec_tot_today)
                 flux_tot += flux_galac
 
-            np.savetxt("fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM), np.transpose([Evec, flux_tot]) )
-            if Mpbh>Mevap:
-                np.savetxt("fluxes/{:.1e}/flux_galac.txt".format(Mpbh, as_DM), np.transpose([Evec, flux_galac]) )
-                np.savetxt("fluxes/{:.1e}/flux_extragalac.txt".format(Mpbh, as_DM), np.transpose([Evec, flux_tot - flux_galac]) )
+            np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot]) )
+            if Mpbh>=Mevap:
+                np.savetxt("fluxes/{:.1e}/flux_galac".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_galac]) )
+                np.savetxt("fluxes/{:.1e}/flux_extragalac".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot - flux_galac]) )
 
             onefile.extend(list(flux_tot))
 
@@ -253,4 +275,4 @@ def compute_flux(Mpbhs, as_DM, use_inst = 0):
         masses.extend(list(np.tile(Mpbh, len(Evec))))
 
     # File with PBH mass, energy and flux, not used in this code, for exporting only
-    np.savetxt("fluxes/totalflux_Mpbh_from_{:.1e}_to_{:.1e}.txt".format(Mpbhs[0], Mpbhs[-1]), np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )
+    np.savetxt("fluxes/totalflux_Mpbh_from_{:.1e}_to_{:.1e}".format(Mpbhs[0], Mpbhs[-1])+sufx, np.transpose([np.array(masses), np.tile(Evec, len(Mpbhs)), np.array(onefile)]) )

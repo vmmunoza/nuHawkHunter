@@ -72,7 +72,7 @@ def event_rate(E_o, E_nu, flux, exp):
             res = 0.5
 
         elif exp=="SK":
-            ntot = 2.5e34*22.5/187  # Same than HK, but with 22.5 kton
+            ntot = 1.5e33 #2.5e34*22.5/(2.*187)  # Same than HK, but with 22.5 kton
             eps = 0.74              # From 1804.03157, without neutron capture efficiency. Check
             # E_visible -> Eo = E_e
             Ee = E_o
@@ -174,6 +174,12 @@ def event_rate(E_o, E_nu, flux, exp):
         Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
         return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
 
+# Latitude correction for atmospheric background, interpolated from the values shown in arXiv:astro-ph/0701305, Table III
+def lat_factor(lat):
+    lats = [1.5, 36.5, 40., 45., 63.7]
+    s_lats = [0.8, 1., 1.25, 1.5, 2.]
+    s_lat = interp1d(lats, s_lats)
+    return s_lat(lat)
 
 # Compute the event rates for the backgrounds
 # Returns an array of observed energies (somewhat arbitrary in principle) and the background events
@@ -194,8 +200,9 @@ def back_rate(exp):
         return EbackSKinvmu - np_dif, bacSKinvmu + bckHKCC(EbackSKinvmu)
 
     if exp=="JUNO":
+        lat = lat_factor(22.22) # correction for JUNO latitude: 22.22º N
         maxind = 21#23
-        Enuatm, fluxe, fluxebar = Eatmos[2:maxind], fluxatmos_e[2:maxind], fluxatmos_antie[2:maxind]
+        Enuatm, fluxe, fluxebar = Eatmos[2:maxind], fluxatmos_e[2:maxind]*lat, fluxatmos_antie[2:maxind]*lat
         #backCC = event_rate(Enuatm - np_dif + m_e, Enuatm, fluxebar, exp)
 
         backCC = []
@@ -211,9 +218,10 @@ def back_rate(exp):
         return Enuatm - np_dif + m_e, backNC + backCC
 
     if exp=="DUNE":
+        lat = lat_factor(44.25) # correction for JUNO latitude: 22.22º N
         # Consider energies above 19 MeV to avoid solar backgrounds. Take up to  ~70 MeV, check
         maxind = 21
-        EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]
+        EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
         backDUNE = np.array([event_rate(Eo, EbackDUNE, fluxatmoslow, exp) for Eo in EbackDUNE])
         return EbackDUNE, backDUNE
 
@@ -254,7 +262,10 @@ def binned_events(Eback, events, bin=1.):
     return Ebin, np.array(eventsbin)#/bin
 
 # Compute the event rate for the signal and backgrounds for a range of PBH masses
-def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
+def compute_events(Mpbhs, fpbhs, exp, as_DM, mass_spec = 0, sig = 0, plotevents=0, binevents=1):
+
+    # Sufix for outputs depending on the mass function
+    sufx = sufix(mass_spec, sig)
 
     Eobs, eventback0 = back_rate(exp)
 
@@ -266,7 +277,7 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
     for mm, Mpbh in enumerate(Mpbhs):
 
-        fileflux = "fluxes/{:.1e}/flux_isDM_{}.txt".format(Mpbh, as_DM)
+        fileflux = "fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx
         E_nu, flux = np.loadtxt(fileflux, unpack=True)
         # From seconds to years
         flux = flux*year_sec
@@ -286,9 +297,9 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, plotevents=0, binevents=1):
 
         if binevents:
             Ebackbin, eventsbin = binned_events(Eobs, events, bin)
-            np.savetxt("fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh,exp), np.transpose([Ebackbin, eventsbin]) )
+            np.savetxt("fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp)+sufx, np.transpose([Ebackbin, eventsbin]) )
         else:
-            np.savetxt("fluxes/{:.1e}/event_rate_{}.txt".format(Mpbh,exp), np.transpose([Eobs, events]) )
+            np.savetxt("fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp)+sufx, np.transpose([Eobs, events]) )
 
         """
         print("\nMpbh",np.log10(Mpbh))
