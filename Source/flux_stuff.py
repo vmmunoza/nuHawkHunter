@@ -10,12 +10,21 @@ from Source.evaporation import *
 
 # Number density of PBHs n_pbh at z = 0 (cm^-3)
 # beta and f_pbh defined outside of the function (i.e., f_PBH=1 or beta'=1 for this formula, scale it later)
-def n_pbh(Mpbh, as_DM):
-    if as_DM:
-        return Om_dm*rho_c/Mpbh
-    else:
-        # See Carr 2010
-        return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
+def n_pbh(Mpbh, as_DM, mass_spec):
+    # For monochromatic
+    if mass_spec==0:
+        if as_DM:
+            return Om_dm*rho_c/Mpbh
+        else:
+            # See Carr 2010
+            return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
+    # For lognormal, employ normalization such that BlackHawk parameter amplitude_lognormal = 1
+    # Thus, this quantity is \rho_PBH, rather than n_PBH (different units)
+    elif mass_spec==1:
+        if as_DM:
+            return Om_dm*rho_c
+        else:
+            return Om_rad*rho_c
 
 
 # Modify the flux for each flavour due to neutrino oscillations (oscillation angles from 2006.11237)
@@ -83,16 +92,18 @@ def D_factor():
 galacticfactor = D_factor()
 
 # Galactic flux (f_PBH=1, scale it afterwards)
-def galactic_flux(Mpbh, energyrate):
+def galactic_flux(Mpbh, energyrate, mass_spec):
 
-    return energyrate*galacticfactor/Mpbh
+    galflux = energyrate*galacticfactor/Mpbh
+    if mass_spec==1: galflux*Mpbh       # Correct units for lognormal (see normalization in n_pbh(Mpbh, as_DM, mass_spec))
+    return galflux
 
 #-------
 # Extragalactic flux
 #-------
 
 # Compute the diffuse flux
-def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, aprox=0):
+def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, mass_spec, aprox=0):
     flux_vec = []
     logonepluszz = np.linspace( np.log(1.+zmin), np.log(1.+zmax) , 100)
     onepluszz = np.exp(logonepluszz)
@@ -102,11 +113,11 @@ def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, aprox=0):
         else:
             rate = dNdEdt_extension(E_vec[-1],spec_int,E*onepluszz,Mpbh)
         integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
-        flux_vec.append( n_pbh(Mpbh, as_DM)*integral*c )
+        flux_vec.append( n_pbh(Mpbh, as_DM, mass_spec)*integral*c )
     return np.array(flux_vec)
 
 # Compute the approximated flux (does not work well, it has to be revised)
-def flux_approx(zmin, zmax, Mpbh, E, as_DM):  #
+def flux_approx(zmin, zmax, Mpbh, E, as_DM, mass_spec):  #
     if E>4.*Tpbh(Mpbh):
         integral = blackbody(E, Mpbh)*dtdz(0.)
     else:
@@ -114,7 +125,7 @@ def flux_approx(zmin, zmax, Mpbh, E, as_DM):  #
         onepluszz = np.exp(logonepluszz)
         #integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
         integral = E**2.*27.*np.pi*G_N**2.*Mpbh**2.*integrate.simps( dtdz(onepluszz-1.)*onepluszz**2.*onepluszz*onepluszz, logonepluszz )
-    return n_pbh(Mpbh, as_DM)*integral*c
+    return n_pbh(Mpbh, as_DM, mass_spec)*integral*c
 
 flux_approx = np.vectorize( flux_approx )
 
@@ -172,11 +183,11 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
             zmax = (1.+zmin)*1.e5 - 1.
             #print("Mass: {:.1e}, z min: {:.1e}".format( Mpbh, zmin ) )
 
-            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM)
-            flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM)
+            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM, mass_spec)
+            flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM, mass_spec)
 
             if Mpbh>=Mevap:
-                flux_galac = galactic_flux(Mpbh, spec_sec(Evec))
+                flux_galac = galactic_flux(Mpbh, spec_sec(Evec), mass_spec)
                 flux_sec += flux_galac/1.e3     # Change units to MeV (factor 1.e3)
 
             # Change units to MeV (factor 1.e3)
@@ -249,7 +260,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
                 integrand = d2NdEdt_ts[:,j]*(1.+reds)
                 # Introduce a step function to finish the integral at the current age of the universe
                 integral = integrate.simps( integrand[:finindex]*timevec[:finindex]*np.heaviside(ageuniverse-timevec[:finindex],0.), np.log(timevec[:finindex]) )
-                flux_tot.append( n_pbh(Mpbh, as_DM)*integral*c )
+                flux_tot.append( n_pbh(Mpbh, as_DM, mass_spec)*integral*c )
 
             # Change units to MeV (factor 1.e3)
             Evec, flux_tot = Evec*1.e3, np.array(flux_tot)/1.e3
@@ -260,7 +271,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
                 # Find the spectrum evaluated at the current age of the universe
                 ind = find_nearest(spec_tot[1:,0], ageuniverse, axis=0)
                 spec_tot_today = spec_tot[1+ind,1:]/1.e3    # Change units to MeV (factor 1.e3)
-                flux_galac = galactic_flux(Mpbh, spec_tot_today)
+                flux_galac = galactic_flux(Mpbh, spec_tot_today, mass_spec)
                 flux_tot += flux_galac
 
             np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot]) )
