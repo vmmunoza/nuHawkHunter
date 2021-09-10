@@ -172,17 +172,17 @@ def event_rate(E_o, E_nu, flux, exp):
 
 
 
-        if use_res:
+        """if use_res:
             E_r = np.linspace(0.005,E_o*10,500) # check the spacing of this vector
             Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
             my_opts={"epsabs": 0.00, "epsrel" : 1e-2, "limit" : 300}
             return ntot*eps*integrate.nquad( lambda Enu,Er: sigma_diff_CEnuNS(Enu, Er, A, Z, mT)*fluxint(Enu)*np.heaviside(E_r_max(Enu, mT)-Er, 0.)*gauss_prof(res,Er, E_o), [ [min(Enuvec),max(Enuvec)] ,[min(E_r),max(E_r)] ],opts=my_opts)[0]
 
-        else:
+        else:"""
 
-            E_r = E_o
-            Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
-            return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
+        E_r = E_o
+        Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
+        return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
 
 
 # Latitude correction for atmospheric background, interpolated from the values shown in arXiv:astro-ph/0701305, Table III
