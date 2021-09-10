@@ -167,12 +167,23 @@ def event_rate(E_o, E_nu, flux, exp):
 
         eps = 1.
         ntot = m_fid*(gr_to_GeV*1.e3)/(m_uma*m_p)
-        #print(exp, ntot)
-
+        res = 0.12 # https://arxiv.org/pdf/1107.2155.pdf.
         mT = m_p*Z + m_n*(A-Z)
-        E_r = E_o
-        Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
-        return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
+
+
+
+        if use_res:
+            E_r = np.linspace(0.005,E_o*10,500) # check the spacing of this vector
+            Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
+            my_opts={"epsabs": 0.00, "epsrel" : 1e-2, "limit" : 300}
+            return ntot*eps*integrate.nquad( lambda Enu,Er: sigma_diff_CEnuNS(Enu, Er, A, Z, mT)*fluxint(Enu)*np.heaviside(E_r_max(Enu, mT)-Er, 0.)*gauss_prof(res,Er, E_o), [ [min(Enuvec),max(Enuvec)] ,[min(E_r),max(E_r)] ],opts=my_opts)[0]
+
+        else:
+
+            E_r = E_o
+            Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, mT)), np.log10(E_nu[-1]), 500 )
+            return ntot*eps*integrate.simps( sigma_diff_CEnuNS(Enuvec, E_r, A, Z, mT)*fluxint(Enuvec)*np.heaviside(E_r_max(Enuvec, mT)-E_r, 0.), Enuvec)
+
 
 # Latitude correction for atmospheric background, interpolated from the values shown in arXiv:astro-ph/0701305, Table III
 def lat_factor(lat):
@@ -218,7 +229,7 @@ def back_rate(exp):
         return Enuatm - np_dif + m_e, backNC + backCC
 
     if exp=="DUNE":
-        lat = lat_factor(44.25) # correction for JUNO latitude: 22.22º N
+        lat = lat_factor(44.25) # correction for DUNE latitude: 44.25º N
         # Consider energies above 19 MeV to avoid solar backgrounds. Take up to  ~70 MeV, check
         maxind = 21
         EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
@@ -226,6 +237,7 @@ def back_rate(exp):
         return EbackDUNE, backDUNE
 
     if (exp=="DARWIN") or (exp=="ARGO"):
+        lat = lat_factor(42.25) # correction for DARWIN latitude (Gran Sasso): 42.25º N (take same for ARGO)
         # For CEnuNS, observed energies of the order of keV
         backfolder = "data/backfluxes/"
         Eatm, atm_nue = np.loadtxt(backfolder+"atmnue_noosc_fluka_flux.dat",unpack=True)
@@ -233,7 +245,7 @@ def back_rate(exp):
         Eatm, atm_numu = np.loadtxt(backfolder+"atmnumu_noosc_fluka_flux.dat",unpack=True)
         Eatm, atm_numubar = np.loadtxt(backfolder+"atmnumubar_noosc_fluka_flux.dat",unpack=True)
         Eatm*=1.e3 # to MeV
-        atmflux = (atm_nue + atm_nuebar + atm_numu + atm_numubar)/1.e7 # GeV^-1 m^-2 s^-1 -> MeV^-1 cm^-2 s^-1
+        atmflux = (atm_nue + atm_nuebar + atm_numu + atm_numubar)*lat/1.e7 # latitude correction, GeV^-1 m^-2 s^-1 -> MeV^-1 cm^-2 s^-1
         atmint = interp1d(Eatm, atmflux, fill_value=0., bounds_error=False)
         Ehep, sol_hep = np.loadtxt(backfolder+"HEPNeutrinoFlux.dat",unpack=True)
         EB8, sol_B8_1, sol_B8_2, sol_B8_3 = np.loadtxt(backfolder+"B8NeutrinoFlux.dat",unpack=True)

@@ -55,6 +55,8 @@ cols = ["r", "m", "purple", "b", "g", "orange"]
 Mevap = 7.8e14  # estimation from BlackHawk results
 # other estimates give 5.e14
 
+folder_blackhawk = "BlackHawkData/"
+
 #-------
 # Miscelanea functions
 #-------

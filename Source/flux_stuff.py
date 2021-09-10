@@ -47,8 +47,8 @@ def sufix(mass_spec, sig = 0):
 #-------
 
 # Some NFW parameters
-r_dot=8.5 # kpc
-r_h=200. # kpc
+r_dot = 8.5 # kpc
+r_h = 200. # kpc
 r_s = 20.   # kpc
 rhocentral = 0.4 # GeV/cm^3
 
@@ -94,8 +94,10 @@ galacticfactor = D_factor()
 # Galactic flux (f_PBH=1, scale it afterwards)
 def galactic_flux(Mpbh, energyrate, mass_spec):
 
-    galflux = energyrate*galacticfactor/Mpbh
-    if mass_spec==1: galflux*Mpbh       # Correct units for lognormal (see normalization in n_pbh(Mpbh, as_DM, mass_spec))
+    if mass_spec==0:
+        galflux = energyrate*galacticfactor/Mpbh
+    elif mass_spec==1:
+        galflux = energyrate*galacticfactor       # Correct units for lognormal (see normalization in n_pbh(Mpbh, as_DM, mass_spec))
     return galflux
 
 #-------
@@ -150,7 +152,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
 
         print("Mass: {:.1e} g".format( Mpbh ) )
 
-        folder = "BlackHawkData/{:.1e}/".format(Mpbh)
+        folder = folder_blackhawk+"{:.1e}/".format(Mpbh)
 
         if not os.path.exists("fluxes/{:.1e}".format(Mpbh)):
             os.system("mkdir "+"fluxes/{:.1e}".format(Mpbh))
@@ -239,7 +241,6 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
 
             reds = z_from_t_int(timevec)
 
-
             d2NdEdt_ts = []
             wi = []
             for it, time in enumerate(timevec):
@@ -250,7 +251,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
                 #rateredshift = dNdEdt_extension(Evec[-1]*(1.+reds[it]),d2NdEdt_time,Evec*(1.+reds[it]),Mpbh)
                 rateredshift = d2NdEdt_time(Evec*(1.+reds[it]))
 
-                d2NdEdt_ts.append(  rateredshift )
+                d2NdEdt_ts.append( rateredshift )
 
             d2NdEdt_ts = np.array(d2NdEdt_ts)
 
