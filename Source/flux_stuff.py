@@ -277,8 +277,8 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
 
             np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot]) )
             if Mpbh>=Mevap:
-                np.savetxt("fluxes/{:.1e}/flux_galac".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_galac]) )
-                np.savetxt("fluxes/{:.1e}/flux_extragalac".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot - flux_galac]) )
+                np.savetxt("fluxes/{:.1e}/flux_galac_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_galac]) )
+                np.savetxt("fluxes/{:.1e}/flux_extragalac_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot - flux_galac]) )
 
             onefile.extend(list(flux_tot))
 

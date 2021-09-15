@@ -2,7 +2,7 @@
 # Statistical functions for computing the bounds
 #-------------------------------
 
-from Source.event_rate import *
+from Source.experiments import *
 from scipy.optimize import fsolve, brentq
 
 # Years for the exposure
