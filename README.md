@@ -43,16 +43,12 @@ Here is a brief description of the scripts included in `Source`, where the relev
 
 - `cross_sections.py`: includes the relevant cross sections employed.
 
-- `event_rate.py`: computes the event rate for the PBH signals and for the backgrounds.
+- `experiments.py`: includes the definition of the different experiments and the methods to compute the event rate for the PBH signals and for the backgrounds.
 
 - `chi2.py`: functions to compute and interpolate the chi2.
 
 
 ## Stuff to do
-
-- Calcular correctamente los backgrounds NC para JUNO, para lo que hace falta incluir más cross sections.
-
-- Para el IBD, se usa la cross section total en vez de integrar la diferencial, porque esto me da problemas numéricos. Buena aproximación? Solucionar!
 
 - Incluir los bounds correctos para SK, usando cálculo de Sergio
 
