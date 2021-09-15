@@ -7,6 +7,8 @@ This code makes use of neutrino fluxes computed with [BlackHawk](https://blackha
 
 It can also be employed for Diffuse Supernova Neutrino Background or similar studies by replacing the signal fluxes by the proper ones.
 
+But first play some [Axie](https://www.youtube.com/watch?v=Lg5C2EbYueo)
+
 <img src="figures/fluxes_DM.png" width="60%">
 
 In the following we present a brief explanation of the scripts included.
