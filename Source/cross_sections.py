@@ -76,14 +76,7 @@ def dsigmadE_IBD(E_nu, E_e):
 def sigmaIBD(E_e):
     return 9.52e-44*( E_e*np.sqrt(E_e**2. - m_e**2.) )*(1. - 7.*(E_e + np_dif)/m_p )
 
-def gauss_prof(res, Ee, E_o, offset=0.):
-    #deltaE = res*np.sqrt(E_o)  # in MeV
-    #deltaE = np.sqrt(res**2.*E_o + offset**2.*E_o**2.)  # in MeV
-    #deltaE = res*np.sqrt(E_o) + offset*E_o  # in MeV
-    deltaE = -0.123 + 0.376*np.sqrt(E_o) + 0.0349*E_o
-    return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
 
-gauss_prof = np.vectorize(gauss_prof)
 
 # It doesn't work very well
 def Enu_from_Ee(Ee):

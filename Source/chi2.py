@@ -26,11 +26,7 @@ def pbh_bounds_chi2(Mpbhs, fpbhs, exp, is_DM, mass_spec, sig):
     # Sufix for outputs depending on the mass function
     sufx = sufix(mass_spec, sig)
 
-    Eback, eventback = back_rate(exp)
-    bin = 1.
-    if (exp=="DARWIN") or (exp=="ARGO"):
-        bin = 5.e-3
-    Eback, eventback = binned_events(Eback, eventback, bin)
+    Eback, eventback = exp.Eback_bin, exp.backrate_bin
     eventback = eventback*years
 
     eventdat = eventback    # for forecasts, take data as background
@@ -39,7 +35,7 @@ def pbh_bounds_chi2(Mpbhs, fpbhs, exp, is_DM, mass_spec, sig):
 
     for Mpbh in Mpbhs:
 
-        folder = "fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp)+sufx
+        folder = "fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp.name)+sufx
         Evec, events = np.loadtxt(folder, unpack=True)
 
         chi2_fpbh = []
