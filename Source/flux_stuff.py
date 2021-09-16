@@ -21,10 +21,11 @@ def n_pbh(Mpbh, as_DM, mass_spec):
     # For lognormal, employ normalization such that BlackHawk parameter amplitude_lognormal = 1
     # Thus, this quantity is \rho_PBH, rather than n_PBH (different units)
     elif mass_spec==1:
+        Mmean = Mpbh*np.exp(sig**2./2.)
         if as_DM:
-            return Om_dm*rho_c
+            return Om_dm*rho_c/Mmean
         else:
-            return Om_rad*rho_c
+            return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)*Mpbh/Mmean
 
 
 # Modify the flux for each flavour due to neutrino oscillations (oscillation angles from 2006.11237)
