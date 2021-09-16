@@ -10,7 +10,7 @@ from Source.evaporation import *
 
 # Number density of PBHs n_pbh at z = 0 (cm^-3)
 # beta and f_pbh defined outside of the function (i.e., f_PBH=1 or beta'=1 for this formula, scale it later)
-def n_pbh(Mpbh, as_DM, mass_spec):
+def n_pbh(Mpbh, as_DM, mass_spec, sig=0):
     # For monochromatic
     if mass_spec==0:
         if as_DM:
@@ -19,7 +19,6 @@ def n_pbh(Mpbh, as_DM, mass_spec):
             # See Carr 2010
             return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)
     # For lognormal, employ normalization such that BlackHawk parameter amplitude_lognormal = 1
-    # Thus, this quantity is \rho_PBH, rather than n_PBH (different units)
     elif mass_spec==1:
         Mmean = Mpbh*np.exp(sig**2./2.)
         if as_DM:
@@ -93,12 +92,13 @@ def D_factor():
 galacticfactor = D_factor()
 
 # Galactic flux (f_PBH=1, scale it afterwards)
-def galactic_flux(Mpbh, energyrate, mass_spec):
+def galactic_flux(Mpbh, energyrate, mass_spec, sig=0):
 
     if mass_spec==0:
         galflux = energyrate*galacticfactor/Mpbh
     elif mass_spec==1:
-        galflux = energyrate*galacticfactor       # Correct units for lognormal (see normalization in n_pbh(Mpbh, as_DM, mass_spec))
+        Mmean = Mpbh*np.exp(sig**2./2.)
+        galflux = energyrate*galacticfactor/Mmean
     return galflux
 
 #-------
@@ -116,7 +116,7 @@ def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, mass_spec, aprox=0):
         else:
             rate = dNdEdt_extension(E_vec[-1],spec_int,E*onepluszz,Mpbh)
         integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
-        flux_vec.append( n_pbh(Mpbh, as_DM, mass_spec)*integral*c )
+        flux_vec.append( n_pbh(Mpbh, as_DM, mass_spec, sig)*integral*c )
     return np.array(flux_vec)
 
 # Compute the approximated flux (does not work well, it has to be revised)
@@ -128,7 +128,7 @@ def flux_approx(zmin, zmax, Mpbh, E, as_DM, mass_spec):  #
         onepluszz = np.exp(logonepluszz)
         #integral = integrate.simps( dtdz(onepluszz-1.)*rate*onepluszz*onepluszz, logonepluszz )
         integral = E**2.*27.*np.pi*G_N**2.*Mpbh**2.*integrate.simps( dtdz(onepluszz-1.)*onepluszz**2.*onepluszz*onepluszz, logonepluszz )
-    return n_pbh(Mpbh, as_DM, mass_spec)*integral*c
+    return n_pbh(Mpbh, as_DM, mass_spec, sig)*integral*c
 
 flux_approx = np.vectorize( flux_approx )
 
@@ -190,7 +190,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
             flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM, mass_spec)
 
             if Mpbh>=Mevap:
-                flux_galac = galactic_flux(Mpbh, spec_sec(Evec), mass_spec)
+                flux_galac = galactic_flux(Mpbh, spec_sec(Evec), mass_spec, sig)
                 flux_sec += flux_galac/1.e3     # Change units to MeV (factor 1.e3)
 
             # Change units to MeV (factor 1.e3)
@@ -262,7 +262,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
                 integrand = d2NdEdt_ts[:,j]*(1.+reds)
                 # Introduce a step function to finish the integral at the current age of the universe
                 integral = integrate.simps( integrand[:finindex]*timevec[:finindex]*np.heaviside(ageuniverse-timevec[:finindex],0.), np.log(timevec[:finindex]) )
-                flux_tot.append( n_pbh(Mpbh, as_DM, mass_spec)*integral*c )
+                flux_tot.append( n_pbh(Mpbh, as_DM, mass_spec, sig)*integral*c )
 
             # Change units to MeV (factor 1.e3)
             Evec, flux_tot = Evec*1.e3, np.array(flux_tot)/1.e3
@@ -273,7 +273,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
                 # Find the spectrum evaluated at the current age of the universe
                 ind = find_nearest(spec_tot[1:,0], ageuniverse, axis=0)
                 spec_tot_today = spec_tot[1+ind,1:]/1.e3    # Change units to MeV (factor 1.e3)
-                flux_galac = galactic_flux(Mpbh, spec_tot_today, mass_spec)
+                flux_galac = galactic_flux(Mpbh, spec_tot_today, mass_spec, sig)
                 flux_tot += flux_galac
 
             np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_tot]) )
