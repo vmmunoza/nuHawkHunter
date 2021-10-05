@@ -260,7 +260,7 @@ class experiment():
                 #my_opts={"epsabs": 0.00, "epsrel" : 1e-2, "limit" : 300}
                 #events = ntot*eps*integrate.nquad( lambda Enu,Er: sigma_diff_CEnuNS(Enu, Er, self.A, self.Z, self.mT)*fluxint(Enu)*np.heaviside(E_r_max(Enu, self.mT)-Er, 0.)*gauss_prof(res,Er, E_o), [ [min(Enuvec),max(Enuvec)] ,[min(E_r),max(E_r)] ],opts=my_opts)[0]
                 #events = integrate.simps( self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), E_r )
-                events = integrate.quad(lambda E_r: self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), 0.001, E_o*10, epsrel=1e-4, limit=300 )[0]
+                events = integrate.quad(lambda E_r: self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof_CEnuNS(E_r, E_o), 0.001, E_o*10, epsrel=1e-4, limit=300 )[0]
                 #print(events)
 
             return events
