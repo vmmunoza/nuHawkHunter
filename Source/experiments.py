@@ -117,6 +117,10 @@ class experiment():
         #deltaE = res*np.sqrt(E_o) + offset*E_o  # in MeV
         #deltaE = -0.123 + 0.376*np.sqrt(E_o) + 0.0349*E_o  # SK or HK
         return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
+    
+    def gauss_prof_CEnuNS(self,Ee, E_o):
+            deltaE = self.res*np.sqrt(Ee)  # in MeV
+            return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
 
     def back_rate(self):
 
