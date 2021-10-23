@@ -106,7 +106,7 @@ def galactic_flux(Mpbh, energyrate, mass_spec, sig=0):
 #-------
 
 # Compute the diffuse flux
-def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, mass_spec, aprox=0):
+def flux(zmin, zmax, Mpbh, E_vec, spec_int, as_DM, mass_spec, sig=0, aprox=0):
     flux_vec = []
     logonepluszz = np.linspace( np.log(1.+zmin), np.log(1.+zmax) , 100)
     onepluszz = np.exp(logonepluszz)
@@ -179,24 +179,24 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
             spec_prim = interp1d(E_prim,data_primary[:,6],fill_value="extrapolate")
             spec_sec = interp1d(Evec,tot_sec,fill_value="extrapolate")
 
-            #zmin = 0.
-            #if Mpbh<Mevap:
-            zmin = np.max(0., zevap(Mpbh))
+            zmin = max([0., zevap(Mpbh)])
             # Take an arbitrary large maximum z
             zmax = (1.+zmin)*1.e5 - 1.
-            #print("Mass: {:.1e}, z min: {:.1e}".format( Mpbh, zmin ) )
 
-            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM, mass_spec)
-            flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM, mass_spec)
+            flux_prim = flux(zmin, zmax, Mpbh, E_prim, spec_prim, as_DM, mass_spec, sig)/1.e3     # Change units to MeV (factor 1.e3)
+            flux_sec = flux(zmin, zmax, Mpbh, Evec, spec_sec, as_DM, mass_spec, sig)/1.e3     # Change units to MeV (factor 1.e3)
 
             if Mpbh>=Mevap:
-                flux_galac = galactic_flux(Mpbh, spec_sec(Evec), mass_spec, sig)
-                flux_sec += flux_galac/1.e3     # Change units to MeV (factor 1.e3)
+                flux_galac = galactic_flux(Mpbh, spec_sec(Evec), mass_spec, sig)/1.e3     # Change units to MeV (factor 1.e3)
+                flux_sec += flux_galac
 
             # Change units to MeV (factor 1.e3)
-            Evec, flux_prim, flux_sec = Evec*1.e3, flux_prim/1.e3, flux_sec/1.e3
+            Evec = Evec*1.e3
 
             np.savetxt("fluxes/{:.1e}/flux_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_sec]) )
+            if Mpbh>=Mevap:
+                np.savetxt("fluxes/{:.1e}/flux_galac_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_galac]) )
+                np.savetxt("fluxes/{:.1e}/flux_extragalac_isDM_{}".format(Mpbh, as_DM)+sufx, np.transpose([Evec, flux_sec - flux_galac]) )
 
             onefile.extend(list(flux_sec))
 
@@ -220,6 +220,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
             # Take into account oscillations
             spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:] = flux_oscillations(spec_tot_e[1:,1:], spec_tot_mu[1:,1:], spec_tot_tau[1:,1:])
             #spec_tot = spec_tot_e #+ spec_tot_mu + spec_tot_tau
+            #spec_tot = spec_tot_mu
             spec_tot = spec_tot_e
             spec_tot[1:,1:] = spec_tot[1:,1:]/2.# 1/2 for taking only neutrino (or antineutrino)
 

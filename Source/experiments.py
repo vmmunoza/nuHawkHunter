@@ -310,8 +310,6 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, mass_spec = 0, sig = 0, plotevents=
         else:
             np.savetxt("fluxes/{:.1e}/event_rate_{}".format(Mpbh,exp.name)+sufx, np.transpose([Eobs, events]) )
 
-
-
         if plotevents:
             if binevents:
                 plt.step(Ebackbin, fpbhs[mm]*eventsbin, color=cols[mm], label = r"$M_{\rm PBH}=$"+scinot(Mpbh)+fpbhlabel+scinot(fpbhs[mm]))
@@ -361,9 +359,9 @@ DUNE = experiment(name = "DUNE",
                 typeexp = "LiquidArgon",
                 ntot = 6.02e32,  # 40 kton
                 eps = 0.86,
-                res = 0.11,
+                res = 0., # 0.11,
                 lat = 44.25,
-                offset = 0.02)
+                offset = 0.2) # 0.02)
 
 # DARWIN
 DARWIN = experiment(name = "DARWIN",
@@ -374,7 +372,7 @@ DARWIN = experiment(name = "DARWIN",
                     lat = 42.25,    # Gran Sasso latitude
                     use_res = 0,
                     use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
-                    bin = 5.e-3)
+                    bin = 5.e-3)    # 5keV resolution
 
 # ARGO
 ARGO = experiment(name = "ARGO",
@@ -385,4 +383,4 @@ ARGO = experiment(name = "ARGO",
                 lat = 42.25,    # Gran Sasso latitude
                 use_res = 0,
                 use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
-                bin = 5.e-3)
+                bin = 5.e-3)    # 5keV resolution

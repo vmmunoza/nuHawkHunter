@@ -93,7 +93,7 @@ EnuIBD = interp1d(EeIBD, EnuIBDtab, fill_value="extrapolate")
 #-----------
 
 MeVtofm = 0.0050677312
-sin2thetaw = 0.231  # sin2 of the Weinberg angle
+sin2thetaw = 0.23857  # sin2 of the Weinberg angle
 cm2invGeV = 5.06773058e+13 # cm to GeV^(-1)
 
 # Helm form factor, from Lewin & Smith 1996, "Review of mathematics, numerical factors, and corrections for dark matter experiments based on elastic nuclear recoil"
