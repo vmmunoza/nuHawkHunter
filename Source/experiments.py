@@ -2,12 +2,6 @@
 # Compute the event rate at different experiments
 #-------------------------------
 
-#--------
-# TO DO
-# escribir gaussian profile para cada experimento
-# background para SK
-#--------
-
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -57,7 +51,7 @@ fluxatmos_e, fluxatmos_antie = fluxatmos_e*year_sec, fluxatmos_antie*year_sec   
 # Class experiment
 
 class experiment():
-    def __init__(self, name, typeexp, ntot, eps, res, lat, use_res=1, use_mfid=0, offset=0., bin=1.):
+    def __init__(self, name, typeexp, ntot, eps, res, lat, use_res=1, use_mfid=0, bin=1.):
 
         self.name = name
         self.type = typeexp
@@ -66,7 +60,6 @@ class experiment():
         self.lat = lat
         self.use_mfid = use_mfid
         self.res = res
-        self.offset = offset
         self.bin = bin
 
         if self.type=="LiArCEnuNS":
@@ -111,17 +104,20 @@ class experiment():
         s_lat = interp1d(lats, s_lats)
         return s_lat(self.lat)
 
-    def gauss_prof(self, Ee, E_o):
-        #deltaE = res*np.sqrt(E_o)  # in MeV
-        deltaE = np.sqrt(self.res**2.*E_o + self.offset**2.*E_o**2.)  # in MeV
-        #deltaE = res*np.sqrt(E_o) + offset*E_o  # in MeV
-        #deltaE = -0.123 + 0.376*np.sqrt(E_o) + 0.0349*E_o  # SK or HK
-        return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
-    
-    def gauss_prof_CEnuNS(self,Ee, E_o):
-            deltaE = self.res*np.sqrt(Ee)  # in MeV
-            return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
+    # Energy resolution delta_E (in MeV, E_o in MeV)
+    def energy_resolution(self, E_o):
+        Eterm, sqrtterm, offset = self.res
+        deltaE = Eterm*E_o + sqrtterm*np.sqrt(E_o) + offset
+        #deltaE = np.sqrt(self.res**2.*E_o + self.offset**2.*E_o**2.)  # in MeV
+        return deltaE
 
+    # Gaussian resolution profile
+    def gauss_prof(self, Ee, E_o):
+        deltaE = self.energy_resolution(E_o)
+        return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
+
+    # Background rate
+    # TO BE REWRITTEN BETTER
     def back_rate(self):
 
         if self.type=="WaterCherenkov":
@@ -163,6 +159,16 @@ class experiment():
             maxind = 21
             EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
             backDUNE = np.array([self.event_rate(Eo, EbackDUNE, fluxatmoslow) for Eo in EbackDUNE])
+            # Include solar background
+            backfolder = "data/backfluxes/"
+            Ehep, sol_hep = np.loadtxt(backfolder+"HEPNeutrinoFlux.dat",unpack=True)
+            EB8, sol_B8_1, sol_B8_2, sol_B8_3 = np.loadtxt(backfolder+"B8NeutrinoFlux.dat",unpack=True)
+            sol_B8 = sol_B8_1 #+ sol_B8_2 + sol_B8_3
+            hepint = interp1d(Ehep, sol_hep, fill_value=0., bounds_error=False)
+            B8int = interp1d(EB8, sol_B8, fill_value=0., bounds_error=False)
+            # Sum backgrounds and correct normalization, see table III of 1812.05550 or Table 2 of 1208.5723
+            backsolarDUNE = B8int(EbackDUNE)*4.59e6 + hepint(EbackDUNE)*8.31e3
+            backDUNE += np.array([self.event_rate(Eo, EbackDUNE, backsolarDUNE) for Eo in EbackDUNE])
             return EbackDUNE, backDUNE
 
         elif self.channel=="CEnuNS":
@@ -193,6 +199,10 @@ class experiment():
         else:
             print("Experiment not valid: background not found.\n")
 
+    # "Raw" event rate, without resolution integral
+    # E_o: observed energy (of positron, photon, etc)
+    # E_nu: neutrino energy array
+    # flux: neutrino flux evaluated at E_nu
     def nonint_event_rate(self, E_o, E_nu, flux):
 
         fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
@@ -232,8 +242,8 @@ class experiment():
         return events
 
 
-
     # Method to compute the event rate for an experiment
+    # If use_res==1, compute resolution integral, otherwise call nonint_event_rate
     # E_o: observed energy (of positron, photon, etc)
     # E_nu: neutrino energy array
     # flux: neutrino flux evaluated at E_nu
@@ -260,13 +270,12 @@ class experiment():
                 #my_opts={"epsabs": 0.00, "epsrel" : 1e-2, "limit" : 300}
                 #events = ntot*eps*integrate.nquad( lambda Enu,Er: sigma_diff_CEnuNS(Enu, Er, self.A, self.Z, self.mT)*fluxint(Enu)*np.heaviside(E_r_max(Enu, self.mT)-Er, 0.)*gauss_prof(res,Er, E_o), [ [min(Enuvec),max(Enuvec)] ,[min(E_r),max(E_r)] ],opts=my_opts)[0]
                 #events = integrate.simps( self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), E_r )
-                events = integrate.quad(lambda E_r: self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof_CEnuNS(E_r, E_o), 0.001, E_o*10, epsrel=1e-4, limit=300 )[0]
+                events = integrate.quad(lambda E_r: self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), 0.001, E_o*10, epsrel=1e-4, limit=300 )[0]
                 #print(events)
 
             return events
         else:
             return self.nonint_event_rate(E_o, E_nu, flux)
-
 
 
 
@@ -339,7 +348,7 @@ SK = experiment(name = "SK",
                 typeexp = "WaterCherenkov",
                 ntot = 1.5e33,   # 22.5 kton
                 eps = 0.74,      # From 1804.03157, without neutron capture efficiency. Check
-                res = 0.5,
+                res = [0.0349, 0.376, -0.123], #[0., 0.5, 0.],
                 lat = 36.5)
 
 # Hyper Kamiokande
@@ -347,7 +356,7 @@ HK = experiment(name = "HK",
                 typeexp = "WaterCherenkovGd",
                 ntot = 2.5e34,   # 187 kton
                 eps = 0.67,      # 1804.03157
-                res = 0.5,
+                res = [0.0349, 0.376, -0.123],
                 lat = 36.5)
 
 # JUNO
@@ -355,7 +364,7 @@ JUNO = experiment(name = "JUNO",
                 typeexp = "LiquidScintillator",
                 ntot = 1.2e33,   # 17 kton
                 eps = 0.5,       # 1507.05613, for signal, reactor and atm. CC
-                res = 0.03,
+                res = [0., 0.03, 0.],
                 lat = 22.22)
 
 # DUNE
@@ -363,18 +372,16 @@ DUNE = experiment(name = "DUNE",
                 typeexp = "LiquidArgon",
                 ntot = 6.02e32,  # 40 kton
                 eps = 0.86,
-                res = 0., # 0.11,
-                lat = 44.25,
-                offset = 0.2) # 0.02)
+                res = [0.2, 0., 0.], # [0.02, 0.11, 0.]
+                lat = 44.25)
 
 # DARWIN
 DARWIN = experiment(name = "DARWIN",
                     typeexp = "LiXeCEnuNS",
                     ntot = 40.e6,   # fiducial mass in g, 0.04 kton (fiducial mass rather than ntot)
                     eps = 1.,
-                    res = 0.12,     # 1107.2155
+                    res = [0.06, 0.32/10.**(3./2.), 0.], # 10.**(3./2.) factor for keV -> MeV conversion
                     lat = 42.25,    # Gran Sasso latitude
-                    use_res = 0,
                     use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
                     bin = 5.e-3)    # 5keV resolution
 
@@ -383,8 +390,7 @@ ARGO = experiment(name = "ARGO",
                 typeexp = "LiArCEnuNS",
                 ntot = 370.e6,   # fiducial mass in g, 0.04 kton (rather than ntot)
                 eps = 1.,
-                res = 0.12,     # 1107.2155
+                res = [0.06, 0.32/10.**(3./2.), 0.], # 10.**(3./2.) factor for keV -> MeV conversion
                 lat = 42.25,    # Gran Sasso latitude
-                use_res = 0,
                 use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
                 bin = 5.e-3)    # 5keV resolution
