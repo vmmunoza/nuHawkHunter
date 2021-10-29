@@ -105,16 +105,16 @@ class experiment():
         return s_lat(self.lat)
 
     # Energy resolution delta_E (in MeV, E_o in MeV)
-    def energy_resolution(self, E_o):
+    def energy_resolution(self, E):
         Eterm, sqrtterm, offset = self.res
-        deltaE = Eterm*E_o + sqrtterm*np.sqrt(E_o) + offset
-        #deltaE = np.sqrt(self.res**2.*E_o + self.offset**2.*E_o**2.)  # in MeV
+        deltaE = Eterm*E + sqrtterm*np.sqrt(E) + offset
+        #deltaE = np.sqrt(self.res**2.*E + self.offset**2.*E**2.)  # in MeV
         return deltaE
 
     # Gaussian resolution profile
-    def gauss_prof(self, Ee, E_o):
-        deltaE = self.energy_resolution(E_o)
-        return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Ee-E_o )**2./deltaE**2. )
+    def gauss_prof(self, Etrue, E_o):
+        deltaE = self.energy_resolution(Etrue)
+        return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Etrue-E_o )**2./deltaE**2. )
 
     # Background rate
     # TO BE REWRITTEN BETTER
@@ -128,22 +128,18 @@ class experiment():
             #return EbackHKnew, backHKnew
             #return EbackSK, backSK*187/22.5
             #bckHKinvmu = interp1d(EbackSKinvmu, bacSKinvmu, fill_value="extrapolate")
-            maxind = 21
-            Enuatm, fluxe, fluxebar = Eatmos[2:maxind], fluxatmos_e[2:maxind], fluxatmos_antie[2:maxind]
+            minind, maxind = 2, 21
+            Enuatm, fluxe, fluxebar = Eatmos[minind:maxind], fluxatmos_e[minind:maxind], fluxatmos_antie[minind:maxind]
             backHKCC = np.array([self.event_rate(Enu - np_dif, Enuatm, fluxebar) for Enu in Enuatm])
             bckHKCC = interp1d(Enuatm, backHKCC, fill_value="extrapolate")
             return EbackSKinvmu - np_dif, bacSKinvmu + bckHKCC(EbackSKinvmu)
 
         elif self.type=="LiquidScintillator":
             lat = self.lat_factor() # correction for latitude
-            maxind = 21#23
-            Enuatm, fluxe, fluxebar = Eatmos[2:maxind], fluxatmos_e[2:maxind]*lat, fluxatmos_antie[2:maxind]*lat
+            minind, maxind = 2, 21
+            Enuatm, fluxe, fluxebar = Eatmos[minind:maxind], fluxatmos_e[minind:maxind]*lat, fluxatmos_antie[minind:maxind]*lat
             #backCC = event_rate(Enuatm - np_dif + m_e, Enuatm, fluxebar, exp)
-
-            backCC = []
-            for Enu in Enuatm:
-                backCC.append( self.event_rate(Enu - np_dif + m_e, Enuatm, fluxebar) )
-            backCC = np.array(backCC)
+            backCC = np.array( [self.event_rate(Enu - np_dif + m_e, Enuatm, fluxebar) for Enu in Enuatm ] )
 
             # NC contribution, negligible
             #ntot_C, eps_NC = 4.505e33, 0.011
@@ -156,8 +152,10 @@ class experiment():
         elif self.type=="LiquidArgon":
             lat = self.lat_factor() # correction for latitude
             # Consider energies above 19 MeV to avoid solar backgrounds. Take up to  ~70 MeV, check
-            maxind = 21
-            EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
+            # Include lower energies for computing the solar background events, since these are relevant due to energy resolution, later take only energy bins above 19 MeV
+            minind, maxind = 5, 21
+            #EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
+            EbackDUNE, fluxatmoslow = Eatmos[:maxind], fluxatmos_e[:maxind]*lat
             backDUNE = np.array([self.event_rate(Eo, EbackDUNE, fluxatmoslow) for Eo in EbackDUNE])
             # Include solar background
             backfolder = "data/backfluxes/"
@@ -167,9 +165,9 @@ class experiment():
             hepint = interp1d(Ehep, sol_hep, fill_value=0., bounds_error=False)
             B8int = interp1d(EB8, sol_B8, fill_value=0., bounds_error=False)
             # Sum backgrounds and correct normalization, see table III of 1812.05550 or Table 2 of 1208.5723
-            backsolarDUNE = B8int(EbackDUNE)*4.59e6 + hepint(EbackDUNE)*8.31e3
+            backsolarDUNE = ( B8int(EbackDUNE)*4.59e6 + hepint(EbackDUNE)*8.31e3 )*year_sec
             backDUNE += np.array([self.event_rate(Eo, EbackDUNE, backsolarDUNE) for Eo in EbackDUNE])
-            return EbackDUNE, backDUNE
+            return EbackDUNE[minind:], backDUNE[minind:]
 
         elif self.channel=="CEnuNS":
             lat = self.lat_factor() # correction for latitude
@@ -357,6 +355,7 @@ HK = experiment(name = "HK",
                 ntot = 2.5e34,   # 187 kton
                 eps = 0.67,      # 1804.03157
                 res = [0.0349, 0.376, -0.123],
+                bin = 20.,
                 lat = 36.5)
 
 # JUNO
@@ -365,6 +364,7 @@ JUNO = experiment(name = "JUNO",
                 ntot = 1.2e33,   # 17 kton
                 eps = 0.5,       # 1507.05613, for signal, reactor and atm. CC
                 res = [0., 0.03, 0.],
+                bin = 4.,
                 lat = 22.22)
 
 # DUNE
@@ -373,6 +373,7 @@ DUNE = experiment(name = "DUNE",
                 ntot = 6.02e32,  # 40 kton
                 eps = 0.86,
                 res = [0.2, 0., 0.], # [0.02, 0.11, 0.]
+                bin = 4.,
                 lat = 44.25)
 
 # DARWIN

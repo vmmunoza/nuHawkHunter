@@ -3,13 +3,9 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2109.XXXX-B31B1B.svg)](http://arxiv.org/abs/2109.XXXX)
 ![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)
 
-blablabla
-
-This code makes use of neutrino fluxes computed with [BlackHawk](https://blackhawk.hepforge.org/) to explore the prospects of detect neutrinos coming from Primordial Black Holes in future neutrino telescopes.
+Code to explore the prospects of detect neutrinos coming from evaporating Primordial Black Holes in future neutrino telescopes. It makes use of neutrino fluxes from Hawking radiation computed with [BlackHawk](https://blackhawk.hepforge.org/).
 
 It can also be employed for Diffuse Supernova Neutrino Background or similar studies by replacing the signal fluxes by the proper ones.
-
-But first play some [Axie](https://www.youtube.com/watch?v=Lg5C2EbYueo)
 
 <img src="figures/fluxes_DM.png" width="60%">
 
@@ -55,8 +51,6 @@ Here is a brief description of the scripts included in `Source`, where the relev
 ## Stuff to do
 
 - Incluir los bounds correctos para SK, usando cálculo de Sergio
-
-- Acabar con el capitalismo.
 
 
 ## Contact

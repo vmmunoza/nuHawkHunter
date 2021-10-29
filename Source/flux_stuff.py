@@ -24,7 +24,7 @@ def n_pbh(Mpbh, as_DM, mass_spec, sig=0):
         if as_DM:
             return Om_dm*rho_c/Mmean
         else:
-            return (GpToCm)**(-3.)/(7.98e-29)*np.exp(-3./2.*np.log(Mpbh)-9./8.*sig**2.)
+            return (GpToCm)**(-3.)/(7.98e-29)*(Mpbh/Msun)**(-3./2.)*np.exp(-9./8.*sig**2.)
 
 
 # Modify the flux for each flavour due to neutrino oscillations (oscillation angles from 2006.11237)
