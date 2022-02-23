@@ -1,11 +1,11 @@
 # νHawkHunter
 [![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.0000000.svg)](https://zenodo.org/record/0000000)
 [![arXiv](https://img.shields.io/badge/arXiv-2109.XXXX-B31B1B.svg)](http://arxiv.org/abs/2109.XXXX)
-![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)
+![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Code to explore the prospects of detect neutrinos coming from evaporating Primordial Black Holes in future neutrino telescopes. It makes use of neutrino fluxes from Hawking radiation computed with [BlackHawk](https://blackhawk.hepforge.org/).
+Code to explore the prospects of detect neutrinos coming from evaporating Primordial Black Holes in future neutrino telescopes. It makes use of neutrino fluxes from Hawking radiation computed with the open source code [BlackHawk](https://blackhawk.hepforge.org/).
 
-It can also be employed for Diffuse Supernova Neutrino Background or similar studies by replacing the signal fluxes by the proper ones.
+It is also suitable to be employed for Diffuse Supernova Neutrino Background or similar studies by replacing the signal fluxes by the proper ones.
 
 <img src="figures/fluxes_DM.png" width="60%">
 
@@ -26,31 +26,31 @@ There are several Jupyter notebooks to plot relevant quantities and compute boun
 
 - `plot_events.ipynb`: plots the event rate for the PBH signals and for the backgrounds.
 
-- `PBH_constraints.ipynb`: jupyter notebook to compute the bounds on the PBH abundance.
+- `PBH_constraints.ipynb`: computes the forecasted bounds on the PBH abundance for future experiments.
 
 
 ## Source
 
 Here is a brief description of the scripts included in `Source`, where the relevant computations are defined:
 
-- `constants.py`: definition of relevant constants and initialization of several packages.
+- `constants.py`: contains definitions of relevant constants and initialization of several packages.
 
 - `cosmo.py`: includes some useful cosmological functions.
 
 - `evaporation.py`: includes functions related with the Hawking evaporation.
 
-- `flux_stuff.py`: just some relevant stuff for computing the fluxes.
+- `fluxes.py`: defines routines to compute the galactic and extragalactic fluxes.
 
 - `cross_sections.py`: includes the relevant cross sections employed.
 
-- `experiments.py`: includes the definition of the different experiments and the methods to compute the event rate for the PBH signals and for the backgrounds.
+- `experiments.py`: contains the definition of the different experiments and the methods to compute the event rate for the PBH signals and for the backgrounds.
 
-- `chi2.py`: functions to compute and interpolate the chi2.
+- `chi2.py`: defines functions to compute and interpolate the chi2.
 
 
-## Stuff to do
+## Citation
 
-- Incluir los bounds correctos para SK, usando cálculo de Sergio
+If you use the code, please link this repository, and cite [arXiv:2111.xxxx](https://arxiv.org/abs/2111.xxxx) and the DOI [10.5281/zenodo.xxxxx](https://doi.org/10.5281/zenodo.xxxxx).
 
 
 ## Contact

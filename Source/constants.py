@@ -49,7 +49,7 @@ G_N = (6.67408e-11*pow(leng_conversion*100.,3.)/(mass_conversion*1000.)/pow(time
 sectoyear = 3.17098e-8
 
 # Colors for plots
-cols = ["r", "m", "purple", "b", "g", "orange"]
+cols = ["r", "m", "b", "g","m", "orange"]
 
 # Inital PBH mass (in g) evaporating at the age of the universe
 Mevap = 7.8e14  # estimation from BlackHawk results

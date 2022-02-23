@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import integrate
 from scipy.interpolate import interp1d, Rbf
-from Source.flux_stuff import *
+from Source.fluxes import *
 from Source.cross_sections import *
 
 #-- Load backgrounds --#
@@ -97,6 +97,9 @@ class experiment():
         # Compute binned background event rate
         self.Eback_bin, self.backrate_bin = self.binned_events(self.Eback, self.backrate)
 
+        # Relevant energy range
+        self.Emin, self.Emax = self.Eback[0], self.Eback[-1]
+
     # Latitude correction for atmospheric background, interpolated from the values shown in arXiv:astro-ph/0701305, Table III
     def lat_factor(self):
         lats = [1.5, 36.5, 40., 45., 63.7]
@@ -146,6 +149,7 @@ class experiment():
             #backNC = 0.#ntot_C*eps_NC*fluxe*sigmaC(Enuatm)
 
             backNCfit = interp1d(EbackJUNO_NC, backJUNO_NC, fill_value=(0.,0.), bounds_error=False)
+            #backNCfit = interp1d(EbackJUNO_NC, backJUNO_NC, fill_value="extrapolate")
             backNC = backNCfit(Enuatm)
             return Enuatm - np_dif + m_e, backNC + backCC
 
@@ -202,6 +206,9 @@ class experiment():
     # E_nu: neutrino energy array
     # flux: neutrino flux evaluated at E_nu
     def nonint_event_rate(self, E_o, E_nu, flux):
+
+        infidxs = np.argwhere(~np.isinf(flux)).reshape(-1)
+        E_nu, flux = E_nu[infidxs], flux[infidxs]
 
         fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
         #fluxint1 = interp1d(np.log(E_nu), np.log(flux), fill_value="extrapolate")
@@ -330,10 +337,10 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, mass_spec = 0, sig = 0, plotevents=
     if plotevents:
         if binevents:
             plt.xlim(Ebackbin[0], Ebackbin[-1])
-            plt.fill_between(exp.Eback_bin, np.zeros_like(exp.Eback_bin), exp.backrate_bin, color="b", alpha=0.3, label="Background",step="pre")
+            plt.fill_between(exp.Eback_bin, np.zeros_like(exp.Eback_bin), exp.backrate_bin, color="grey", alpha=0.3, label="Background",step="pre")
         else:
             plt.xlim(Eobs[0], Eobs[-1])
-            plt.fill_between(exp.Eback, np.zeros_like(exp.Eback), exp.backrate, color="b", alpha=0.3, label="Background")
+            plt.fill_between(exp.Eback, np.zeros_like(exp.Eback), exp.backrate, color="grey", alpha=0.3, label="Background")
         if exp.name=="SK":
             plt.scatter(EdatSK, datSK, color="b", marker="o", label = r"SK-II Data")
 
@@ -355,7 +362,7 @@ HK = experiment(name = "HK",
                 ntot = 2.5e34,   # 187 kton
                 eps = 0.67,      # 1804.03157
                 res = [0.0349, 0.376, -0.123],
-                bin = 20.,
+                bin = 2.,
                 lat = 36.5)
 
 # JUNO

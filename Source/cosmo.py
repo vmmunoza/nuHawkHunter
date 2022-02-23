@@ -55,7 +55,7 @@ redshift = np.vectorize(redshift)
 ageuniverse = time_int_a(0., 1.)
 
 
-tvec = np.logspace(-30, np.log10(time_int_a(0., 1.)), 500)
+tvec = np.logspace(-30, np.log10(ageuniverse), 500)
 z_from_t_int = interp1d(tvec, z_from_t(tvec))#, fill_value="extrapolate")
 
 """plt.loglog(tvec, z_from_t_int(tvec),"r-")
