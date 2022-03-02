@@ -31,8 +31,6 @@ bacSKinvmu = bacSKinvmu*bckHK(EbackSKinvmu[23])/bacSKinvmu[23]
 
 # JUNO
 # From 1507.05613, figure 5-2
-#EbackJUNO, backJUNO = np.loadtxt("data/backevents/Back_JUNO.txt", unpack=True, delimiter=";")
-#backJUNO = backJUNO/10.     # Change units
 EbackJUNO_NC, backJUNO_NC = np.loadtxt("data/backevents/Back_JUNO_NC.txt", unpack=True, delimiter=";") # Only NC back
 backJUNO_NC = backJUNO_NC/10.     # Change units
 
@@ -210,8 +208,6 @@ class experiment():
         E_nu, flux = E_nu[infidxs], flux[infidxs]
 
         fluxint = interp1d(E_nu, flux, fill_value="extrapolate")
-        #fluxint1 = interp1d(np.log(E_nu), np.log(flux), fill_value="extrapolate")
-        #fluxint = lambda E: np.exp(fluxint1(np.log(E)))
 
         # Inverse Beta Decay channel (IBD)
         if self.channel == "IBD":
@@ -311,8 +307,6 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, mass_spec = 0, sig = 0, plotevents=
 
         # Compute event rate for PBH signal
         events = np.array( [exp.event_rate(E_o, E_nu, flux) for E_o in Eobs] )
-        #print("en experiments",events.shape, exp.backrate.shape)
-        #print(Mpbh, events[:5], events[70:])
 
         if binevents:
             Ebackbin, eventsbin = exp.binned_events(Eobs, events)
