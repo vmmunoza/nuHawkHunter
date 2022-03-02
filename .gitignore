@@ -5,3 +5,4 @@ __pycache__/
 Source/*.pyc
 Source/__pycache__/
 .ipynb_checkpoints/
+.gitignore~
