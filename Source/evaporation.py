@@ -2,6 +2,12 @@
 # Hawking evaporation functions
 #-------------------------------
 
+"""
+The functions of this script encode approximations aimed for testing and comparison purposes,
+or when instantaneous BlackHawk specra are used,
+but are not employed with the total spectra computations.
+"""
+
 from Source.cosmo import *
 
 
@@ -24,7 +30,7 @@ def blackbody(E, Mpbh):
     else:
         fdistr = ( np.exp( E/Tpbh(Mpbh) ) +1. )**(-1.)
     dNdtdE = gamma(E, Mpbh)*fdistr/(2.*np.pi)
-    return dNdtdE*mass_conversion**2.*time_conversion
+    return dNdtdE*gr_to_GeV**2.*time_conversion
     # 1 degrees of freedom, multiply by 3 flavours and particle-antiparticle (x6) if required
 
 # Extend interpolated spectrum rate 'interp' with the blackbody approximation for high energies > Elim

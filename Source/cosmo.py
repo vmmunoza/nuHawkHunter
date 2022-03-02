@@ -50,44 +50,9 @@ time_int_a = np.vectorize(time_int_a)
 z_from_t = np.vectorize(z_from_t)
 redshift = np.vectorize(redshift)
 
-
 # Age of the universe
 ageuniverse = time_int_a(0., 1.)
 
-
+# Precompute a lookup table relating time and redshift
 tvec = np.logspace(-30, np.log10(ageuniverse), 500)
 z_from_t_int = interp1d(tvec, z_from_t(tvec))#, fill_value="extrapolate")
-
-"""plt.loglog(tvec, z_from_t_int(tvec),"r-")
-plt.loglog(tvec, z_from_t(tvec),"b:")
-plt.show()
-exit()"""
-
-"""
-timess = np.logspace(-30, 17)
-plt.loglog( timess, z_from_t(timess), "r-" )
-plt.loglog( timess, redshift(timess), "b:" )
-plt.show()
-exit()
-"""
-#print(z_from_t(1e9/sectoyear), z_from_t(time_int_a(0., 1.)), time_int_a(0., 1.)*sectoyear/1e9)
-#exit()
-
-"""
-for z in [1e10, 1000, 100]:
-    #print(time_int_z(0.,z), time_from_z(z))
-    tt = time_int_a(0., 1./(1.+z))
-    print( z, z_from_t(tt) )
-
-#zvec = np.logspace(10,0)
-#plt.loglog(zvec, time_int(0.,zvec)*sectoyear)
-#plt.show()
-
-tvec = np.logspace(-30, 15)
-plt.loglog(tvec, z_from_t(tvec))
-plt.ylabel("z")
-plt.xlabel("t [s]")
-plt.show()
-
-exit()
-"""

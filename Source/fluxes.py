@@ -69,25 +69,19 @@ def l_max(cos):
 # D-factor, \int dl \rho_NFW(r(l))
 def D_factor():
 
-    #-------------------------------------------- 1st integrate in l:
+    # First integrate in l:
     cos_vec=np.linspace(-1.,1.,100)
     Integral_l=[]
     for cos in cos_vec:
-        #I=integrate.quad(NFW_profile,0.,l_max(cos),args=(cos), epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
         lvec = np.linspace(0., l_max(cos), 100)
         I = integrate.simps(NFW_profile(lvec, cos), lvec)
-        #loglvec = np.linspace(np.log(1.e-5), np.log(l_max(cos)), 100)
-        #I = integrate.simps(NFW_profile(np.exp(loglvec), cos)*np.exp(loglvec), loglvec)
         Integral_l.append(I)
 
-    #-------------------------------------------- now integrate in cosine:
-
-    #Int_cos= interp1d(cos_vec,Integral_l)
-    #Int_total=integrate.quad(lambda cos: Int_cos(cos),cos_vec[0],cos_vec[-1], epsabs= 1e-10, epsrel= 1e-10,limit=500)[0]
+    # Now integrate in cosine:
     Galactic_contrib = integrate.simps( Integral_l, cos_vec)/2.  # (factor of 2 comes from 2pi of integral over 4pi factor of Eq 4.)
 
-    #------- we must add a kpc to cm factor to match units of flux:
-    return MpcToCm*1.e-3*Galactic_contrib/gr_to_GeV     # this has units of g/cm^2
+    # We must add a kpc to cm factor to match units of flux:
+    return MpcToCm*1.e-3*Galactic_contrib/gr_to_GeV     # This has units of g/cm^2
 
 galacticfactor = D_factor()
 
@@ -146,7 +140,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
 
     sufx = sufix(mass_spec, sig)
 
-    # This will be filled by PBH mass, energy and flux, not used in this code, for exporting only
+    # This will be filled by PBH mass, energy and flux, not used in further computations of this code, for exporting only
     onefile = []
 
     for mm, Mpbh in enumerate(Mpbhs):
@@ -168,10 +162,6 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
             data_secondary = np.genfromtxt(folder+"instantaneous_secondary_spectra"+sufx, skip_header = 2)
             E_prim = data_primary[:,0]
             Evec = data_secondary[:,0]
-
-            #tot_sec = 0.
-            #for i in [2,3,4]:   # three neutrino species
-            #    tot_sec += data_secondary[:,i+1]
 
             spec_tot_e, spec_tot_mu, spec_tot_tau = flux_oscillations(data_secondary[:,3], data_secondary[:,4], data_secondary[:,5])
             tot_sec = spec_tot_e/2. # 1/2 for taking only neutrino (or antineutrino)
@@ -200,7 +190,7 @@ def compute_flux(Mpbhs, as_DM, mass_spec = 0, sig = 0, use_inst = 0):
 
             onefile.extend(list(flux_sec))
 
-            # For masses above ~2.e15, instantaneous flux is equal to the total one
+            # For masses above ~2.e15, instantaneous flux is approx. equal to the total one for monochromatic
         else:
 
             #---------------

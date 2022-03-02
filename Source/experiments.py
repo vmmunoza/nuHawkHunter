@@ -10,8 +10,9 @@ from scipy.interpolate import interp1d, Rbf
 from Source.fluxes import *
 from Source.cross_sections import *
 
-#-- Load backgrounds --#
-
+#---------------------
+# Load backgrounds from external files
+#---------------------
 
 # SK
 EbackSK, backSK = np.loadtxt("data/backevents/Background_SKII.csv", unpack=True, delimiter=",")
@@ -27,10 +28,6 @@ bckHK = interp1d(EbackHK, backHK)
 
 EbackSKinvmu, bacSKinvmu = np.loadtxt("data/backevents/Back_SK_invmuon.txt", unpack=True, delimiter=";")
 bacSKinvmu = bacSKinvmu*bckHK(EbackSKinvmu[23])/bacSKinvmu[23]
-"""plt.plot(EbackSKinvmu, bacSKinvmu,"r-")
-plt.plot(EbackHK, backHK,"b:")
-plt.show()
-exit()"""
 
 # JUNO
 # From 1507.05613, figure 5-2
@@ -48,28 +45,40 @@ backJUNO_NC = backJUNO_NC/10.     # Change units
 Eatmos, fluxatmos_e, fluxatmos_antie = np.loadtxt("data/backfluxes/flux_atmos_e.dat", unpack=True)
 fluxatmos_e, fluxatmos_antie = fluxatmos_e*year_sec, fluxatmos_antie*year_sec   # to yr^-1
 
-# Class experiment
+#---------------------
+# Experiment class
+#---------------------
 
+# name: name of the experiment
+# typeexp: experiment type, possible options are: WaterCherenkov, WaterCherenkovGd, LiXeCEnuNS, LiquidScintillator, LiquidArgon, LiArCEnuNS
+# ntot: total number of targets, or fiducial mass if use_mfid==1
+# eps: detection efficiency of the experiment
+# res: energy resolution parameters (see energy_resolution function definition)
+# lat: latitude of the experiment (relevant for atmospheric background)
+# bin: energy bin size
+# use_res: 1 for computing the number of events with the gaussian profile resolution, 0 assumes a delta function for the resolution (and the res is not employed)
+# use_mfid: if use_mfid==1, compute ntot from the fiducial mass
 class experiment():
-    def __init__(self, name, typeexp, ntot, eps, res, lat, use_res=1, use_mfid=0, bin=1.):
+    def __init__(self, name, typeexp, ntot, eps, res, bin, lat, use_res=1, use_mfid=0):
 
         self.name = name
         self.type = typeexp
         self.ntot = ntot
         self.eps = eps
-        self.lat = lat
-        self.use_mfid = use_mfid
         self.res = res
         self.bin = bin
+        self.lat = lat
+        self.use_res = use_res
+        self.use_mfid = use_mfid
 
         if self.type=="LiArCEnuNS":
-            # Argon
+            # Liquid Argon
             self.Z = 18.
             self.A = 40.
             self.m_uma = 39.948
             self.mT = m_p*self.Z + m_n*(self.A-self.Z)
         if self.type=="LiXeCEnuNS":
-            # Xenon
+            # Liquid Xenon
             self.Z = 54.
             self.A = 132
             self.m_uma = 131.293
@@ -79,10 +88,7 @@ class experiment():
         if use_mfid==1:
             self.ntot = self.ntot*(gr_to_GeV*1.e3)/(self.m_uma*m_p)
 
-        # 1 for computing the number of events with the gaussian profile resolution, 0 assumes a delta function for the resolution
-        self.use_res = use_res
-
-        # Define the channel given the experiment type
+        # Define the channel given the experiment type, among IBD, nuAr and CEnuNS
         if self.type=="WaterCherenkov" or self.type=="WaterCherenkovGd" or self.type=="LiquidScintillator":
             self.channel = "IBD"
         elif self.type=="LiquidArgon":
@@ -120,20 +126,16 @@ class experiment():
         return 1./np.sqrt( 2.*np.pi*deltaE**2. )*np.exp( -1./2.*( Etrue-E_o )**2./deltaE**2. )
 
     # Background rate
-    # TO BE REWRITTEN BETTER
     def back_rate(self):
 
         if self.type=="WaterCherenkov":
             return EbackSK - np_dif, backSK
 
         elif self.type=="WaterCherenkovGd":
-            #EbackHKnew, backHKnew = EbackHK[2:], backHK[2:] # avoid spallation background above 15 MeV
-            #return EbackHKnew, backHKnew
-            #return EbackSK, backSK*187/22.5
-            #bckHKinvmu = interp1d(EbackSKinvmu, bacSKinvmu, fill_value="extrapolate")
+            lat = self.lat_factor() # correction for latitude
             minind, maxind = 2, 21
             Enuatm, fluxe, fluxebar = Eatmos[minind:maxind], fluxatmos_e[minind:maxind], fluxatmos_antie[minind:maxind]
-            backHKCC = np.array([self.event_rate(Enu - np_dif, Enuatm, fluxebar) for Enu in Enuatm])
+            backHKCC = np.array([self.event_rate(Enu - np_dif, Enuatm, fluxebar) for Enu in Enuatm])*lat
             bckHKCC = interp1d(Enuatm, backHKCC, fill_value="extrapolate")
             return EbackSKinvmu - np_dif, bacSKinvmu + bckHKCC(EbackSKinvmu)
 
@@ -141,7 +143,6 @@ class experiment():
             lat = self.lat_factor() # correction for latitude
             minind, maxind = 2, 21
             Enuatm, fluxe, fluxebar = Eatmos[minind:maxind], fluxatmos_e[minind:maxind]*lat, fluxatmos_antie[minind:maxind]*lat
-            #backCC = event_rate(Enuatm - np_dif + m_e, Enuatm, fluxebar, exp)
             backCC = np.array( [self.event_rate(Enu - np_dif + m_e, Enuatm, fluxebar) for Enu in Enuatm ] )
 
             # NC contribution, negligible
@@ -149,7 +150,6 @@ class experiment():
             #backNC = 0.#ntot_C*eps_NC*fluxe*sigmaC(Enuatm)
 
             backNCfit = interp1d(EbackJUNO_NC, backJUNO_NC, fill_value=(0.,0.), bounds_error=False)
-            #backNCfit = interp1d(EbackJUNO_NC, backJUNO_NC, fill_value="extrapolate")
             backNC = backNCfit(Enuatm)
             return Enuatm - np_dif + m_e, backNC + backCC
 
@@ -158,7 +158,6 @@ class experiment():
             # Consider energies above 19 MeV to avoid solar backgrounds. Take up to  ~70 MeV, check
             # Include lower energies for computing the solar background events, since these are relevant due to energy resolution, later take only energy bins above 19 MeV
             minind, maxind = 5, 21
-            #EbackDUNE, fluxatmoslow = Eatmos[5:maxind], fluxatmos_e[5:maxind]*lat
             EbackDUNE, fluxatmoslow = Eatmos[:maxind], fluxatmos_e[:maxind]*lat
             backDUNE = np.array([self.event_rate(Eo, EbackDUNE, fluxatmoslow) for Eo in EbackDUNE])
             # Include solar background
@@ -259,9 +258,7 @@ class experiment():
             if self.channel == "IBD":
                 Ee = np.linspace(m_e, E_o*10.,1500)
                 Enu = EnuIBD(Ee)
-                #Enu = Ee + np_dif
                 events = integrate.simps( self.nonint_event_rate(Ee, E_nu, flux)*self.gauss_prof(Ee, E_o), Ee )
-                #events = ntot*eps*integrate.quad( lambda Ee: fluxint(Ee + np_dif)*sigmaIBD(Ee)*gauss_prof(res, Ee, E_o), m_e, E_o*10. )[0]
 
             # nuAr channel
             elif self.channel == "nuAr":
@@ -271,20 +268,15 @@ class experiment():
             # CEnuNS channel
             elif self.channel == "CEnuNS":
                 E_r = np.linspace(0.001,E_o*10,500)
-                #Enuvec = np.logspace( np.log10(E_nu_min_CE(E_r, self.mT)), np.log10(E_nu[-1]), 500 )
-                #my_opts={"epsabs": 0.00, "epsrel" : 1e-2, "limit" : 300}
-                #events = ntot*eps*integrate.nquad( lambda Enu,Er: sigma_diff_CEnuNS(Enu, Er, self.A, self.Z, self.mT)*fluxint(Enu)*np.heaviside(E_r_max(Enu, self.mT)-Er, 0.)*gauss_prof(res,Er, E_o), [ [min(Enuvec),max(Enuvec)] ,[min(E_r),max(E_r)] ],opts=my_opts)[0]
                 #events = integrate.simps( self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), E_r )
                 events = integrate.quad(lambda E_r: self.nonint_event_rate(E_r, E_nu, flux)*self.gauss_prof(E_r, E_o), 0.001, E_o*10, epsrel=1e-4, limit=300 )[0]
-                #print(events)
 
             return events
         else:
             return self.nonint_event_rate(E_o, E_nu, flux)
 
 
-
-    # Bin energies and events
+    # Binned events
     def binned_events(self, Evec, events):
 
         Ebin = np.arange(Evec[0], Evec[-1], step=self.bin)[:-1]
@@ -348,40 +340,47 @@ def compute_events(Mpbhs, fpbhs, exp, as_DM, mass_spec = 0, sig = 0, plotevents=
 # Experiments
 #---
 
+# Defintion of the different future experiments
+# See the paper for further information regarding the employed values of the parameters
+# The experiment class allow to define customized experiments using some of the available channels but with different settings
+
+"""
 # Super Kamiokande
 SK = experiment(name = "SK",
                 typeexp = "WaterCherenkov",
                 ntot = 1.5e33,   # 22.5 kton
                 eps = 0.74,      # From 1804.03157, without neutron capture efficiency. Check
                 res = [0.0349, 0.376, -0.123], #[0., 0.5, 0.],
+                bin = 1.,
                 lat = 36.5)
+"""
 
 # Hyper Kamiokande
 HK = experiment(name = "HK",
                 typeexp = "WaterCherenkovGd",
                 ntot = 2.5e34,   # 187 kton
                 eps = 0.67,      # 1804.03157
-                res = [0.0349, 0.376, -0.123],
+                res = [0.0349, 0.376, -0.123],  # 1010.0118
                 bin = 2.,
                 lat = 36.5)
 
 # JUNO
 JUNO = experiment(name = "JUNO",
-                typeexp = "LiquidScintillator",
-                ntot = 1.2e33,   # 17 kton
-                eps = 0.5,       # 1507.05613, for signal, reactor and atm. CC
-                res = [0., 0.03, 0.],
-                bin = 4.,
-                lat = 22.22)
+                  typeexp = "LiquidScintillator",
+                  ntot = 1.2e33,   # 17 kton
+                  eps = 0.5,       # 1507.05613, for signal, reactor and atm. CC
+                  res = [0., 0.03, 0.], # 1507.05613
+                  bin = 4.,
+                  lat = 22.22)
 
 # DUNE
 DUNE = experiment(name = "DUNE",
-                typeexp = "LiquidArgon",
-                ntot = 6.02e32,  # 40 kton
-                eps = 0.86,
-                res = [0.2, 0., 0.], # [0.02, 0.11, 0.]
-                bin = 4.,
-                lat = 44.25)
+                  typeexp = "LiquidArgon",
+                  ntot = 6.02e32,   # 40 kton
+                  eps = 0.86,       # 1608.07853, 1804.03157
+                  res = [0.2, 0., 0.], # 2002.03005
+                  bin = 4.,
+                  lat = 44.25)
 
 # DARWIN
 DARWIN = experiment(name = "DARWIN",
@@ -390,15 +389,15 @@ DARWIN = experiment(name = "DARWIN",
                     eps = 1.,
                     res = [0.06, 0.32/10.**(3./2.), 0.], # 10.**(3./2.) factor for keV -> MeV conversion
                     lat = 42.25,    # Gran Sasso latitude
-                    use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
-                    bin = 5.e-3)    # 5keV resolution
+                    bin = 5.e-3,    # 5keV resolution
+                    use_mfid = 1)   # use_mfid = 1: ntot value is fiducial mass, not number of targets
 
 # ARGO
 ARGO = experiment(name = "ARGO",
-                typeexp = "LiArCEnuNS",
-                ntot = 370.e6,   # fiducial mass in g, 0.04 kton (rather than ntot)
-                eps = 1.,
-                res = [0.06, 0.32/10.**(3./2.), 0.], # 10.**(3./2.) factor for keV -> MeV conversion
-                lat = 42.25,    # Gran Sasso latitude
-                use_mfid = 1,   # use_mfid = 1: ntot value is fiducial mass, not number of targets
-                bin = 5.e-3)    # 5keV resolution
+                  typeexp = "LiArCEnuNS",
+                  ntot = 370.e6,   # fiducial mass in g, 0.04 kton (rather than ntot)
+                  eps = 1.,
+                  res = [0.06, 0.32/10.**(3./2.), 0.], # 10.**(3./2.) factor for keV -> MeV conversion
+                  lat = 42.25,    # Gran Sasso latitude
+                  bin = 5.e-3,    # 5keV resolution
+                  use_mfid = 1)   # use_mfid = 1: ntot value is fiducial mass, not number of targets

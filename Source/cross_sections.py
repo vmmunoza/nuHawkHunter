@@ -53,17 +53,6 @@ def dsigmadE_IBD(E_nu, E_e):
     B = t*g1*(f1+f2)
     C = ( f1**2. + g1**2. )/4.
 
-    """
-    EnuCM = (s-m_p**2.)/(2.*np.sqrt(s))
-    EeCM = (s - m_n**2. + m_e**2.)/(2.*np.sqrt(s))
-    peCM = np.sqrt( (s - ( m_n - m_e )**2.)*( s - ( m_n + m_e )**2. ) )/(2.*np.sqrt(s))
-    #peCM[peCM == np.nan] = 1.e-1
-
-    E_1 = E_nu - delta - EnuCM*(EeCM + peCM)/m_p
-    E_2 = E_nu - delta - EnuCM*(EeCM - peCM)/m_p
-    #print(E_1, E_2)
-    """
-
     Msquare = A - (s-u)*B + (s-u)**2.*C
     dsigmadt = G_F**2.*costhetaC**2./(2.*np.pi*(s-m_p**2.)**2.)*Msquare
     # Allowed range of energies for E_nu and E_e
@@ -77,8 +66,7 @@ def sigmaIBD(E_e):
     return 9.52e-44*( E_e*np.sqrt(E_e**2. - m_e**2.) )*(1. - 7.*(E_e + np_dif)/m_p )
 
 
-
-# It doesn't work very well
+# IBD Enu Ee relation, it doesn't work very well, not used
 def Enu_from_Ee(Ee):
     return 1./2.*(np_dif + m_p - np.sqrt(np_dif**2. - 2.*np_dif*m_p - 4.*Ee*m_p + m_p**2.))
 
@@ -89,10 +77,10 @@ sigIBD = interp1d(EeIBD, sigIBDtab, fill_value="extrapolate")
 EnuIBD = interp1d(EeIBD, EnuIBDtab, fill_value="extrapolate")
 
 #-----------
-# CEnuNS
+# Coherent Elastic Neutrino Nucleon Scattering (CEnuNS)
 #-----------
 
-MeVtofm = 0.0050677312
+MeVtofm = 0.0050677312  # MeV in fm
 sin2thetaw = 0.23857  # sin2 of the Weinberg angle
 cm2invGeV = 5.06773058e+13 # cm to GeV^(-1)
 
@@ -121,7 +109,7 @@ def sigma_diff_CEnuNS(E_nu, E_r, A, Z, mT):
     return G_F**2.*Qw**2.*mT/(4.*np.pi)*(1. - mT*E_r/(2.*E_nu**2.))*helm_factor(E_r, A, Z, mT)*(1./cm2invGeV)**2./1.e6   # last factor stands for units conversion GeV^-4 MeV -> cm^2/MeV
 
 #---------
-# Others
+# Other cross sections
 #---------
 
 # nu_e Argon cross section for DUNE
@@ -132,87 +120,3 @@ sigmaAr = interp1d(EEAr, sigAr, fill_value="extrapolate")
 # nu_ebar Carbon cross section for JUNO background
 EEC, sigC = np.loadtxt("data/crosssections/XS_nue_12C_NC.txt", unpack=True, delimiter=";")
 sigmaC = interp1d(EEC, sigC, fill_value="extrapolate")
-
-# This is for debugging plots
-if __name__=="__main__":
-
-    """A, Z, mT = 137, 55, 137*m_p
-    from scipy import integrate
-    Enuvec = np.linspace(5, 55, 100)
-    XS = []
-    for E_nu in Enuvec:
-        Ervec = np.linspace(1.e-5, E_r_max(E_nu, mT) )
-        XS.append(integrate.simps( sigma_diff_CEnuNS(E_nu, Ervec, A, Z, mT), Ervec))
-    plt.plot(Enuvec, XS)
-    plt.yscale("log")
-    plt.show()
-    exit()"""
-
-    """E_r = np.linspace(0.0001, 0.05, 200)
-    plt.plot(E_r, helm_factor(E_r, 133, 55, 133*m_p))
-    plt.ylim(0,1)
-    plt.xlim(0,0.05)
-    plt.show()
-    exit()"""
-
-    """E_nu = np.linspace(5, 55)
-    E_r = 1.e-3
-    plt.plot(E_nu, E_r*sigma_diff_CEnuNS(E_nu, E_r, 133, 133/2, m_p*133))   # cesium
-    plt.yscale("log")
-    plt.show()
-    exit()"""
-
-    """E_r = np.logspace(-4, 1)
-    E_nu = 20.
-    plt.loglog(E_r,sigma_diff_CEnuNS(E_nu, E_r, 40, 18, m_p*40))
-    plt.show()
-    exit()"""
-
-    """plt.loglog(EeIBD, sigIBDtab, "r-")
-    plt.loglog(EeIBD, sigmaIBD(EeIBD), "b-")
-    plt.show()
-    exit()"""
-
-    """plt.plot(EeIBD, EnuIBDtab, "r-")
-    plt.plot(EeIBD, 1./2.*(np_dif + m_p - np.sqrt(np_dif**2. - 2.*np_dif*m_p - 4.*EeIBD*m_p + m_p**2.)), "b--")
-    plt.plot(EeIBD, EeIBD + np_dif, "g:")
-    plt.show()
-    exit()"""
-
-    def fitfunc(E, A, alp):
-        return A*E**alp
-
-    def fitfunc2(E, A, alp):
-        #return A*np.log10(E) + alp*np.log10(E)**2.
-        return A*np.log10(E)**alp
-
-    Eii = np.linspace(EEC[0], EEC[-1])
-
-    #fitpars = np.polyfit(EE, np.log10(sig), 2)
-    #fit = np.poly1d(fitpars)
-    fitparsAr, firtcov = curve_fit(fitfunc, EEAr, np.log10(sigAr))#, p0=[-4.e1, -0.03])
-    fitparsC, firtcov = curve_fit(fitfunc, EEC, np.log10(sigC))#, p0=[-4.e1, -0.03])
-
-    #plt.plot(Eii, 10.**fit(Eii))
-    plt.plot(Eii, sigmaAr(Eii), "r-")
-    plt.plot(Eii, sigmaC(Eii), "r--")
-    plt.plot(Eii, 10.**fitfunc(Eii, *fitparsAr), "b:")
-    plt.plot(Eii, 10.**fitfunc(Eii, *fitparsC), "b--")
-    #plt.plot(Eii, 10.**(-44.8*Eii**(-0.035)),"g:")
-    plt.yscale("log")
-    plt.xscale("log")
-    print(fitparsAr, fitparsC)
-    print(np.abs(10.**fitfunc(Eii, *fitparsAr) - sigmaAr(Eii))/sigmaAr(Eii))
-    print(np.abs(10.**fitfunc2(Eii, *fitparsC) - sigmaC(Eii))/sigmaC(Eii))
-
-    #EE, sig = np.loadtxt("data/crosssections/nuAr_XS_Kaes.txt", unpack=True, delimiter=";")
-    #sigmaAr = interp1d(EE, sig)
-    #plt.plot(EE, sig, "m-", lw=2, alpha=0.7)
-    #print(np.abs(sig-sigmaAr(EE))/sig)
-
-    #tab = np.loadtxt("data/crosssections/xs_nue_Ar40.txt", unpack=True)   # from code SNOwGLoBES https://github.com/SNOwGLoBES/snowglobes/tree/master/xscns
-    #EE, sig = 10.**tab[0]*1.e3, tab[1]*1e-38*1.e-3
-    #sigmaAr = interp1d(EE, sig)
-    #plt.plot(EE, sig, "b-", lw=2, alpha=0.7)
-
-    plt.show()
