@@ -1,5 +1,5 @@
 # νHawkHunter
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.0000000.svg)](https://zenodo.org/record/0000000)
+[![DOI](https://www.zenodo.org/badge/364986991.svg)](https://www.zenodo.org/badge/latestdoi/364986991)
 [![arXiv](https://img.shields.io/badge/arXiv-2109.XXXX-B31B1B.svg)](http://arxiv.org/abs/2109.XXXX)
 ![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
