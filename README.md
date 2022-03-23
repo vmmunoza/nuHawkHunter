@@ -50,7 +50,7 @@ Here is a brief description of the scripts included in `Source`, where the relev
 
 ## Citation
 
-If you use the code, please link this repository, and cite [arXiv:2111.xxxx](https://arxiv.org/abs/2111.xxxx) and the DOI [10.5281/zenodo.xxxxx](https://doi.org/10.5281/zenodo.xxxxx).
+If you use the code, please link this repository, and cite [arXiv:2111.xxxx](https://arxiv.org/abs/2111.xxxx) and the DOI [10.5281/zenodo.xxxxx](https://www.zenodo.org/badge/latestdoi/364986991).
 
 
 ## Contact
