@@ -11,8 +11,17 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fsolve
 from matplotlib.lines import Line2D
 import matplotlib as mpl
-mpl.rcParams.update({'font.size': 18})
+
+# Settings for plots
+fontsiz = 20
+mpl.rcParams.update({'font.size': fontsiz})
+mpl.rcParams['xtick.labelsize'] = fontsiz
+mpl.rcParams['ytick.labelsize'] = fontsiz
 plt.rcParams['figure.figsize'] = [12, 8]
+mpl.rcParams['xtick.major.size'] = fontsiz/2
+mpl.rcParams['ytick.major.size'] = fontsiz/2
+mpl.rcParams['xtick.minor.size'] = fontsiz/4
+mpl.rcParams['ytick.minor.size'] = fontsiz/4
 
 
 # Create some folders if needed

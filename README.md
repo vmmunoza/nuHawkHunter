@@ -1,5 +1,5 @@
 # νHawkHunter
-[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.0000000.svg)](https://zenodo.org/record/0000000)
+[![DOI](https://www.zenodo.org/badge/364986991.svg)](https://www.zenodo.org/badge/latestdoi/364986991)
 [![arXiv](https://img.shields.io/badge/arXiv-2109.XXXX-B31B1B.svg)](http://arxiv.org/abs/2109.XXXX)
 ![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -50,7 +50,7 @@ Here is a brief description of the scripts included in `Source`, where the relev
 
 ## Citation
 
-If you use the code, please link this repository, and cite [arXiv:2111.xxxx](https://arxiv.org/abs/2111.xxxx) and the DOI [10.5281/zenodo.xxxxx](https://doi.org/10.5281/zenodo.xxxxx).
+If you use the code, please link this repository, and cite [arXiv:2111.xxxx](https://arxiv.org/abs/2111.xxxx) and the DOI [10.5281/zenodo.6380821](https://www.zenodo.org/badge/latestdoi/364986991).
 
 
 ## Contact
