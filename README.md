@@ -4,7 +4,7 @@
 ![Alt text](https://img.shields.io/pypi/pyversions/python-binance.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Code to explore the prospects of detect neutrinos coming from evaporating Primordial Black Holes in future neutrino telescopes. It makes use of neutrino fluxes from Hawking radiation computed with the open source code [BlackHawk](https://blackhawk.hepforge.org/).
+Code to explore the prospects of detect neutrinos coming from evaporating Primordial Black Holes in future terrestial experiments. It makes use of neutrino fluxes from Hawking radiation computed with the open source code [BlackHawk](https://blackhawk.hepforge.org/).
 
 It is also suitable to be employed for Diffuse Supernova Neutrino Background or similar studies by replacing the signal fluxes by the proper ones.
 
